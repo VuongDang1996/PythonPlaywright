@@ -1,0 +1,315 @@
+[
+  {
+    "description": "  As a potential user\n  I want to register for an account\n  So that I can access the website's features",
+    "elements": [
+      {
+        "description": "",
+        "id": "user-registration;tc01---register-user-with-valid-details",
+        "keyword": "Scenario",
+        "line": 7,
+        "name": "TC01 - Register User with valid details",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 386995167
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 8,
+            "name": "I navigate to the home page",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:6"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2905284958
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 9,
+            "name": "I verify that home page is visible successfully",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:11"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 7157374
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 10,
+            "name": "I click on 'Signup / Login' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:17"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 807433625
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 11,
+            "name": "I should see 'New User Signup!' is visible",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:87"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 29262917
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 12,
+            "name": "I enter name \"TestUser\" and email address",
+            "match": {
+              "location": "features/step-definitions/user-registration.steps.ts:6"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 327298375
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "I click 'Signup' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:57"
+            },
+            "result": {
+              "status": "failed",
+              "duration": 5003295916,
+              "error_message": "Error: function timed out, ensure the promise resolves within 5000 milliseconds\n    at Timeout.<anonymous> (/Users/vuong/Documents/Github/SourceCode/PlaywrightAutomation/FrameworkPlaywrightProject/node_modules/@cucumber/cucumber/src/time.ts:52:14)\n    at listOnTimeout (node:internal/timers:608:17)\n    at processTimers (node:internal/timers:543:7)"
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 14,
+            "name": "I should see 'ENTER ACCOUNT INFORMATION' is visible",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:87"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 15,
+            "name": "I fill in the account information with title \"Mr\", password \"password123\"",
+            "match": {
+              "location": "features/step-definitions/user-registration.steps.ts:11"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 16,
+            "name": "I select date of birth \"15\", \"January\", \"1990\"",
+            "match": {
+              "location": "features/step-definitions/user-registration.steps.ts:24"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 17,
+            "name": "I check newsletter and offers checkboxes",
+            "match": {
+              "location": "features/step-definitions/user-registration.steps.ts:29"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      "firstName",
+                      "lastName",
+                      "company",
+                      "address1",
+                      "country",
+                      "state",
+                      "city",
+                      "zipcode",
+                      "mobileNumber"
+                    ]
+                  },
+                  {
+                    "cells": [
+                      "Test",
+                      "User",
+                      "TestCorp",
+                      "123 Main St",
+                      "India",
+                      "Delhi",
+                      "New Delhi",
+                      "110001",
+                      "9876543210"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "keyword": "And ",
+            "line": 18,
+            "name": "I fill in address information",
+            "match": {
+              "location": "features/step-definitions/user-registration.steps.ts:34"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "I click 'Create Account' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:57"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "I should see 'ACCOUNT CREATED!' is visible",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:87"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 23,
+            "name": "I click 'Continue' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:57"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 24,
+            "name": "I should see 'Logged in as username' is visible",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:87"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 25,
+            "name": "I click 'Delete Account' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:57"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 26,
+            "name": "I should see 'ACCOUNT DELETED!' is visible",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:87"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 27,
+            "name": "I click 'Continue' button",
+            "match": {
+              "location": "features/step-definitions/common.steps.ts:57"
+            },
+            "result": {
+              "status": "skipped",
+              "duration": 0
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 26861333
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@smoke",
+            "line": 6
+          },
+          {
+            "name": "@user-registration",
+            "line": 6
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "user-registration",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "User Registration",
+    "tags": [],
+    "uri": "features/user-registration.feature"
+  }
+]

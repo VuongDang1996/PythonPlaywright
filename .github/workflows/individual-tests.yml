@@ -1,0 +1,265 @@
+name: Individual Tests with Allure Report
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/specs/automation-exercise/individual-tests/**'
+      - '.github/workflows/individual-tests.yml'
+      - 'tests/pages/**'
+      - 'tests/fixtures/**'
+      - 'tests/data/**'
+      - 'tests/utils/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/specs/automation-exercise/individual-tests/**'
+      - '.github/workflows/individual-tests.yml'
+      - 'tests/pages/**'
+      - 'tests/fixtures/**'
+      - 'tests/data/**'
+      - 'tests/utils/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to run tests on'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+      test_pattern:
+        description: 'Test pattern to run (e.g., tc01, tc02-tc05, smoke, regression, all)'
+        required: false
+        default: 'all'
+        type: string
+      parallel_workers:
+        description: 'Number of parallel workers'
+        required: false
+        default: '4'
+        type: string
+
+env:
+  NODE_VERSION: '18'
+  BASE_URL: 'http://automationexercise.com'
+
+jobs:
+  test-individual:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ github.event.inputs.browser == 'all' && fromJSON('["chromium", "firefox", "webkit"]') || fromJSON(format('["{0}"]', github.event.inputs.browser || 'chromium')) }}
+
+    name: Test on ${{ matrix.browser }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Create directories
+        run: |
+          mkdir -p allure-results
+          mkdir -p test-results
+          mkdir -p playwright-report
+
+      - name: Run Individual Tests
+        id: test-run
+        run: |
+          echo "Running individual tests with pattern: ${{ github.event.inputs.test_pattern || 'all' }}"
+          
+          if [ "${{ github.event.inputs.test_pattern }}" == "all" ] || [ -z "${{ github.event.inputs.test_pattern }}" ]; then
+            echo "Running all individual tests"
+            npx playwright test tests/specs/automation-exercise/individual-tests --project=${{ matrix.browser }} --reporter=line,allure-playwright --workers=${{ github.event.inputs.parallel_workers || '4' }}
+          elif [ "${{ github.event.inputs.test_pattern }}" == "smoke" ]; then
+            echo "Running smoke tests"
+            npx playwright test tests/specs/automation-exercise/individual-tests --grep="@smoke" --project=${{ matrix.browser }} --reporter=line,allure-playwright --workers=${{ github.event.inputs.parallel_workers || '4' }}
+          elif [ "${{ github.event.inputs.test_pattern }}" == "regression" ]; then
+            echo "Running regression tests"
+            npx playwright test tests/specs/automation-exercise/individual-tests --grep="@regression" --project=${{ matrix.browser }} --reporter=line,allure-playwright --workers=${{ github.event.inputs.parallel_workers || '4' }}
+          else
+            echo "Running tests matching pattern: ${{ github.event.inputs.test_pattern }}"
+            npx playwright test tests/specs/automation-exercise/individual-tests --grep="${{ github.event.inputs.test_pattern }}" --project=${{ matrix.browser }} --reporter=line,allure-playwright --workers=${{ github.event.inputs.parallel_workers || '4' }}
+          fi
+        env:
+          CI: true
+          BROWSER: ${{ matrix.browser }}
+        continue-on-error: true
+
+      - name: Create test summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results for ${{ matrix.browser }}" >> test_summary.md
+          echo "**Status**: ${{ steps.test-run.outcome == 'success' && '✅ Passed' || '❌ Failed' }}" >> test_summary.md
+          echo "**Browser**: ${{ matrix.browser }}" >> test_summary.md
+          echo "**Pattern**: ${{ github.event.inputs.test_pattern || 'all' }}" >> test_summary.md
+          echo "**Workers**: ${{ github.event.inputs.parallel_workers || '4' }}" >> test_summary.md
+          echo "" >> test_summary.md
+          
+          if [ -f "allure-results/allure.properties" ]; then
+            echo "**Allure Results**: Generated ✅" >> test_summary.md
+          else
+            echo "**Allure Results**: Not generated ❌" >> test_summary.md
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.browser }}-${{ github.run_number }}
+          path: |
+            test-results/
+            allure-results/
+            test_summary.md
+          retention-days: 30
+
+      - name: Upload Playwright HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+
+  generate-allure-report:
+    needs: test-individual
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          merge-multiple: true
+          path: combined-results
+
+      - name: Setup Java for Allure
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Allure CLI
+        run: |
+          curl -o allure-2.24.0.tgz -Ls https://github.com/allure-framework/allure2/releases/download/2.24.0/allure-2.24.0.tgz
+          tar -zxf allure-2.24.0.tgz
+          sudo mv allure-2.24.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+          allure --version
+
+      - name: Combine Allure results
+        run: |
+          mkdir -p allure-results
+          find combined-results -name "*.json" -o -name "*.txt" -o -name "*.png" -o -name "*.webm" -o -name "*.md" | while read file; do
+            if [ -f "$file" ]; then
+              cp "$file" allure-results/
+            fi
+          done
+          
+          echo "Combined allure results:"
+          ls -la allure-results/
+
+      - name: Generate Allure Report
+        run: |
+          allure generate allure-results --clean -o allure-report
+          echo "Allure report generated successfully"
+          ls -la allure-report/
+
+      - name: Upload Combined Allure Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-combined-${{ github.run_number }}
+          path: allure-report/
+          retention-days: 30
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          destination_dir: individual-tests-report-${{ github.run_number }}
+
+  test-summary:
+    needs: [test-individual, generate-allure-report]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Create comprehensive test summary
+        run: |
+          echo "# 🧪 Individual Tests Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Execution Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Pattern**: ${{ github.event.inputs.test_pattern || 'all individual tests' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Browser(s)**: ${{ github.event.inputs.browser || 'chromium' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workers**: ${{ github.event.inputs.parallel_workers || '4' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📁 Available Reports" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Playwright HTML Reports**: Check individual browser artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Combined Allure Report**: Available in \`allure-report-combined-${{ github.run_number }}\` artifact" >> $GITHUB_STEP_SUMMARY
+          echo "3. **Test Results**: Raw test data available in \`test-results-*\` artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "## 🌐 GitHub Pages Report" >> $GITHUB_STEP_SUMMARY
+            echo "📊 **Live Report**: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/individual-tests-report-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "## 🔍 Test Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Individual Tests**: ${{ needs.test-individual.result == 'success' && '✅ Completed' || '❌ Issues detected' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Allure Report**: ${{ needs.generate-allure-report.result == 'success' && '✅ Generated' || '❌ Generation failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📝 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "This workflow executes **26 individual test cases** from the automation exercise suite:" >> $GITHUB_STEP_SUMMARY
+          echo "- Authentication tests (TC01-TC05)" >> $GITHUB_STEP_SUMMARY
+          echo "- Product catalog tests (TC06-TC08)" >> $GITHUB_STEP_SUMMARY
+          echo "- Shopping cart tests (TC09-TC13)" >> $GITHUB_STEP_SUMMARY
+          echo "- Checkout/Order tests (TC14-TC16)" >> $GITHUB_STEP_SUMMARY
+          echo "- Advanced functionality tests (TC17-TC26)" >> $GITHUB_STEP_SUMMARY
+
+  notify-status:
+    needs: [test-individual, generate-allure-report, test-summary]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Success notification
+        if: needs.test-individual.result == 'success' && needs.generate-allure-report.result == 'success'
+        run: |
+          echo "🎉 All individual tests completed successfully!"
+          echo "✅ Test execution: Passed"
+          echo "✅ Allure report: Generated"
+          echo "📊 Reports are available in artifacts and GitHub Pages (if main branch)"
+
+      - name: Failure notification
+        if: needs.test-individual.result != 'success' || needs.generate-allure-report.result != 'success'
+        run: |
+          echo "⚠️ Individual tests execution completed with issues"
+          echo "Test Status: ${{ needs.test-individual.result }}"
+          echo "Report Status: ${{ needs.generate-allure-report.result }}"
+          echo "📋 Please check the detailed reports in artifacts for analysis"
+          exit 1

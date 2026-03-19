@@ -1,0 +1,83 @@
+name: Python Pytest Automation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'pytests/**'
+      - 'features/**'
+      - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/python-pytest.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'pytests/**'
+      - 'features/**'
+      - 'requirements.txt'
+      - 'pytest.ini'
+      - '.github/workflows/python-pytest.yml'
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to run tests on'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+
+env:
+  PYTHON_VERSION: '3.12'
+  BASE_URL: 'https://automationexercise.com'
+
+jobs:
+  test-python:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: |
+          python -m playwright install --with-deps ${{ github.event.inputs.browser || 'chromium' }}
+
+      - name: Create output folders
+        run: |
+          mkdir -p allure-results
+          mkdir -p test-results
+
+      - name: Run pytest suite
+        run: |
+          python -m pytest pytests/specs \
+            --browser=${{ github.event.inputs.browser || 'chromium' }} \
+            --alluredir=allure-results \
+            --junitxml=test-results/junit-python.xml \
+            -q
+        env:
+          CI: true
+
+      - name: Upload pytest artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-pytest-results-${{ github.run_number }}
+          path: |
+            allure-results/
+            test-results/
+          retention-days: 30

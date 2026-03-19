@@ -1,0 +1,43 @@
+{
+  "name": "playwright-pytest-framework",
+  "version": "1.0.0",
+  "description": "Playwright Python framework with Pytest, POM, Behave, and Allure reporting",
+  "main": "index.js",
+  "scripts": {
+    "test": "python -m pytest pytests/specs --browser chromium -q",
+    "py:test": "python -m pytest pytests/specs --browser chromium -q",
+    "py:test:headed": "python -m pytest pytests/specs --browser chromium --headed -q",
+    "py:test:smoke": "python -m pytest pytests/specs -m smoke --browser chromium -q",
+    "py:test:regression": "python -m pytest pytests/specs -m regression --browser chromium -q",
+    "py:test:parallel": "python -m pytest pytests/specs --browser chromium -n auto -q",
+    "py:test:chromium": "python -m pytest pytests/specs --browser chromium -q",
+    "py:test:firefox": "python -m pytest pytests/specs --browser firefox -q",
+    "py:test:webkit": "python -m pytest pytests/specs --browser webkit -q",
+    "py:test:allure": "python -m pytest pytests/specs --browser chromium --alluredir=allure-results -q",
+    "py:report:generate": "allure generate allure-results --clean -o allure-report",
+    "py:report:open": "allure open allure-report",
+    "py:report": "python -m pytest pytests/specs --browser chromium --alluredir=allure-results -q && allure generate allure-results --clean -o allure-report && allure open allure-report",
+    "py:bdd:user-registration": "python -m behave features/user-registration.feature",
+    "py:bdd:all": "python -m behave features",
+    "install-browsers": "python -m playwright install",
+    "clean": "rimraf test-results allure-results allure-report .pytest_cache"
+  },
+  "keywords": [
+    "playwright",
+    "python",
+    "pytest",
+    "page-object-model",
+    "pom",
+    "e2e-testing",
+    "automation",
+    "testing-framework"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "allure-commandline": "^2.34.1",
+    "rimraf": "^5.0.0",
+    "cucumber-html-reporter": "^7.2.0"
+  },
+  "dependencies": {}
+}
