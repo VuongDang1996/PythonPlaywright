@@ -1,5 +1,8 @@
 name: Manual Python Playwright
 
+env:
+  HEADLESS: 'true'
+
 on:
   workflow_dispatch:
     inputs:

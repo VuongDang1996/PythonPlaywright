@@ -52,6 +52,10 @@ def _get_worker_id() -> str:
     return worker_id or "master"
 
 
+def _is_ci_environment() -> bool:
+    return os.getenv("CI", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _worker_artifact_dir() -> Path:
     worker_id = _get_worker_id()
     if worker_id == "master":
@@ -84,9 +88,17 @@ def browser_type_launch_args(
     pytestconfig,
 ) -> Dict[str, Any]:
     headed_requested = bool(pytestconfig.getoption("headed"))
+    headless = framework_settings.headless
+
+    if headed_requested:
+        headless = False
+    elif _is_ci_environment():
+        # CI runners typically have no display server, so force headless.
+        headless = True
+
     return {
         **browser_type_launch_args,
-        "headless": False if headed_requested else framework_settings.headless,
+        "headless": headless,
         "slow_mo": framework_settings.slow_mo_ms,
     }
 

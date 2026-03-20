@@ -21,6 +21,7 @@ concurrency:
 env:
   PYTHON_VERSION: '3.12'
   BASE_URL: 'https://automationexercise.com'
+  HEADLESS: 'true'
 
 jobs:
   nightly-regression:

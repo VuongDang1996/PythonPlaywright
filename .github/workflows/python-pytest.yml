@@ -62,6 +62,7 @@ concurrency:
 env:
   PYTHON_VERSION: '3.12'
   BASE_URL: 'https://automationexercise.com'
+  HEADLESS: 'true'
   BROWSER: ${{ github.event.inputs.browser || 'chromium' }}
   PARALLEL_WORKERS: ${{ github.event.inputs.parallel_workers || 'auto' }}
   TEST_SCOPE: ${{ github.event.inputs.test_scope || (github.event_name == 'pull_request' && 'smoke' || 'full') }}
