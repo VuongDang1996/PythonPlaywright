@@ -132,6 +132,17 @@ jobs:
             --event "${{ github.event_name }}" \
             --github-summary
 
+      - name: Summarize nightly failure evidence
+        if: always()
+        run: |
+          python scripts/summarize_failure_evidence.py \
+            --artifacts-dir test-results/artifacts \
+            --videos-dir test-results/videos \
+            --output-json test-results/${{ matrix.browser }}/evidence-summary.json \
+            --output-md test-results/${{ matrix.browser }}/evidence-summary.md \
+            --title "Nightly Failure Evidence (${{ matrix.browser }})" \
+            --github-summary
+
       - name: Persist nightly Allure history payload
         if: always()
         run: |
@@ -167,6 +178,8 @@ jobs:
             test-results/${{ matrix.browser }}/summary.md
             test-results/${{ matrix.browser }}/flaky-trend.json
             test-results/${{ matrix.browser }}/flaky-trend.md
+            test-results/${{ matrix.browser }}/evidence-summary.json
+            test-results/${{ matrix.browser }}/evidence-summary.md
           retention-days: 90
 
       - name: Upload nightly Allure raw results

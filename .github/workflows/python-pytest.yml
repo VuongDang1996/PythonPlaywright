@@ -177,6 +177,17 @@ jobs:
             --event "${{ github.event_name }}" \
             --github-summary
 
+      - name: Summarize failure evidence
+        if: always()
+        run: |
+          python scripts/summarize_failure_evidence.py \
+            --artifacts-dir test-results/artifacts \
+            --videos-dir test-results/videos \
+            --output-json test-results/evidence-summary.json \
+            --output-md test-results/evidence-summary.md \
+            --title "Failure Evidence (${BROWSER})" \
+            --github-summary
+
       - name: Setup Java for Allure
         if: always()
         uses: actions/setup-java@v4
@@ -257,10 +268,12 @@ jobs:
             const marker = '<!-- python-pytest-summary -->';
             let summary = 'Summary unavailable.';
             let trend = '';
+            let evidence = '';
             try { summary = fs.readFileSync('test-results/summary.md', 'utf8'); } catch (_) {}
             try { trend = fs.readFileSync('test-results/flaky-trend.md', 'utf8'); } catch (_) {}
+            try { evidence = fs.readFileSync('test-results/evidence-summary.md', 'utf8'); } catch (_) {}
 
-            const body = `${marker}\n## Python CI Summary (${process.env.BROWSER || 'chromium'})\n\n${summary}\n${trend}`;
+            const body = `${marker}\n## Python CI Summary (${process.env.BROWSER || 'chromium'})\n\n${summary}\n${trend}\n${evidence}`;
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
 
@@ -302,6 +315,8 @@ jobs:
             test-results/summary.md
             test-results/flaky-trend.json
             test-results/flaky-trend.md
+            test-results/evidence-summary.json
+            test-results/evidence-summary.md
           retention-days: 90
 
       - name: Upload Allure raw results

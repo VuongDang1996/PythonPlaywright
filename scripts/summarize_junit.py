@@ -70,6 +70,28 @@ def _escape_cell(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ").strip()
 
 
+def _classify_failure_message(message: str, final_status: str) -> str:
+    text = (message or "").lower()
+
+    if "targetclosederror" in text or "browser has been closed" in text:
+        return "browser_crash_or_launch"
+    if "timeout" in text:
+        return "timeout"
+    if "filenotfounderror" in text:
+        return "artifact_or_file_path"
+    if "assertionerror" in text or "expected" in text:
+        return "assertion"
+    if "google_vignette" in text or "vignette" in text:
+        return "site_interstitial_or_popup"
+    if "locator" in text and "not found" in text:
+        return "locator_not_found"
+    if "network" in text or "connection" in text:
+        return "network_or_connectivity"
+    if final_status == "error":
+        return "setup_or_runtime_error"
+    return "other"
+
+
 def build_summary(xml_files: list[Path]) -> dict:
     totals = {
         "files": len(xml_files),
@@ -200,6 +222,20 @@ def build_summary(xml_files: list[Path]) -> dict:
         reverse=True,
     )
 
+    failure_categories: dict[str, int] = defaultdict(int)
+    for item in top_failing_tests:
+        category = _classify_failure_message(item.get("last_message", ""), item["final_status"])
+        failure_categories[category] += 1
+
+    categorized_failures = [
+        {"category": category, "count": count}
+        for category, count in sorted(
+            failure_categories.items(),
+            key=lambda pair: pair[1],
+            reverse=True,
+        )
+    ]
+
     top_slowest_tests = []
     for test_name, values in durations.items():
         if not values:
@@ -258,6 +294,7 @@ def build_summary(xml_files: list[Path]) -> dict:
         "flaky_count": len(flaky),
         "flaky_tests": sorted(flaky, key=lambda item: item["attempts"], reverse=True),
         "top_failing_tests": top_failing_tests[:20],
+        "failure_categories": categorized_failures,
         "top_slowest_tests": top_slowest_tests[:20],
         "passed_tests": passed_tests[:50],
         "suite_breakdown": suite_breakdown,
@@ -299,6 +336,19 @@ def to_markdown(summary: dict, title: str) -> str:
                 f"| {_escape_cell(item['test'])} | {item['final_status']} | {item['attempts']} | "
                 f"{item['failed_attempts']} | {item['error_attempts']} | {message} |"
             )
+
+    if summary.get("failure_categories"):
+        lines.extend(
+            [
+                "",
+                "### Failure Categories",
+                "",
+                "| Category | Count |",
+                "| --- | ---: |",
+            ]
+        )
+        for item in summary["failure_categories"]:
+            lines.append(f"| {_escape_cell(item['category'])} | {item['count']} |")
 
     if summary["flaky_tests"]:
         lines.extend(

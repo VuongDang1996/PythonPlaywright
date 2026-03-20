@@ -61,12 +61,38 @@ jobs:
         env:
           CI: true
 
+      - name: Generate manual test summary
+        if: always()
+        run: |
+          python scripts/summarize_junit.py \
+            --input test-results/junit-python.xml \
+            --output-json test-results/summary.json \
+            --output-md test-results/summary.md \
+            --title "Manual Python Summary (${{ matrix.browser }})" \
+            --github-summary
+
+      - name: Summarize manual failure evidence
+        if: always()
+        run: |
+          python scripts/summarize_failure_evidence.py \
+            --artifacts-dir test-results/artifacts \
+            --videos-dir test-results/videos \
+            --output-json test-results/evidence-summary.json \
+            --output-md test-results/evidence-summary.md \
+            --title "Manual Failure Evidence (${{ matrix.browser }})" \
+            --github-summary
+
       - name: Upload JUnit artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: manual-python-junit-${{ matrix.browser }}
-          path: test-results/junit-python.xml
+          path: |
+            test-results/junit-python.xml
+            test-results/summary.json
+            test-results/summary.md
+            test-results/evidence-summary.json
+            test-results/evidence-summary.md
           retention-days: 30
           if-no-files-found: ignore
 
