@@ -1,5 +1,6 @@
 import os
 import re
+import hashlib
 from pathlib import Path
 from typing import Any, Dict
 
@@ -38,7 +39,12 @@ load_dotenv()
 
 
 def _safe_artifact_name(nodeid: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9_.-]+", "_", nodeid)
+    safe = re.sub(r"[^a-zA-Z0-9_.-]+", "_", nodeid)
+    if len(safe) <= 90:
+        return safe
+
+    digest = hashlib.sha1(nodeid.encode("utf-8")).hexdigest()[:12]
+    return f"{safe[:70]}_{digest}"
 
 
 def _get_worker_id() -> str:
@@ -155,6 +161,7 @@ def capture_artifacts_on_failure(request, page, context, framework_settings: Fra
 
         if framework_settings.screenshot_on_failure:
             screenshot_path = artifact_dir / f"{artifact_name}.png"
+            screenshot_path.parent.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(screenshot_path), full_page=True)
             if allure:
                 allure.attach.file(
@@ -165,6 +172,7 @@ def capture_artifacts_on_failure(request, page, context, framework_settings: Fra
 
         if console_messages:
             console_path = artifact_dir / f"{artifact_name}.console.log"
+            console_path.parent.mkdir(parents=True, exist_ok=True)
             console_path.write_text("\n".join(console_messages), encoding="utf-8")
             if allure:
                 allure.attach.file(
@@ -178,6 +186,7 @@ def capture_artifacts_on_failure(request, page, context, framework_settings: Fra
             artifact_dir = _worker_artifact_dir()
             artifact_dir.mkdir(parents=True, exist_ok=True)
             trace_path = artifact_dir / f"{_worker_safe_artifact_name(request.node.nodeid)}.zip"
+            trace_path.parent.mkdir(parents=True, exist_ok=True)
             context.tracing.stop(path=str(trace_path))
             if allure:
                 allure.attach.file(
