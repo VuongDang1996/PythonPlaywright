@@ -71,6 +71,17 @@ def _worker_safe_artifact_name(nodeid: str) -> str:
     return f"{worker_id}_{safe_name}"
 
 
+def _allure_video_attachment_type() -> Any:
+    if not allure:
+        return None
+
+    return getattr(
+        allure.attachment_type,
+        "WEBM",
+        getattr(allure.attachment_type, "MP4", allure.attachment_type.TEXT),
+    )
+
+
 @pytest.fixture(scope="session")
 def framework_settings() -> FrameworkSettings:
     return load_framework_settings()
@@ -208,6 +219,25 @@ def capture_artifacts_on_failure(request, page, context, framework_settings: Fra
                 )
         else:
             context.tracing.stop()
+
+    if failed and framework_settings.video_on_failure and allure:
+        try:
+            video = page.video
+            if video:
+                # Ensure the page is finalized so Playwright writes the video file.
+                if not page.is_closed():
+                    page.close()
+
+                video_path = Path(video.path())
+                if video_path.exists():
+                    allure.attach.file(
+                        str(video_path),
+                        name="failure-video",
+                        attachment_type=_allure_video_attachment_type(),
+                    )
+        except Exception:
+            # Video attachment is best-effort and should never break test teardown.
+            pass
 
 
 @pytest.fixture
