@@ -78,6 +78,9 @@ jobs:
         run: |
           mkdir -p allure-results/${{ matrix.browser }}
           mkdir -p test-results/${{ matrix.browser }}
+          mkdir -p test-results/artifacts
+          mkdir -p test-results/videos
+          mkdir -p test-results/videos/${{ matrix.browser }}
           mkdir -p .allure-history/${{ matrix.browser }}
           mkdir -p .ci-trends/${{ matrix.browser }}
 
@@ -125,7 +128,8 @@ jobs:
             --ref "${{ github.ref_name }}" \
             --sha "${{ github.sha }}" \
             --browser "${{ matrix.browser }}" \
-            --event "${{ github.event_name }}"
+            --event "${{ github.event_name }}" \
+            --github-summary
 
       - name: Persist nightly Allure history payload
         if: always()

@@ -118,6 +118,9 @@ jobs:
         run: |
           mkdir -p allure-results
           mkdir -p test-results
+          mkdir -p test-results/artifacts
+          mkdir -p test-results/videos
+          mkdir -p test-results/videos/${BROWSER}
           mkdir -p .allure-history/${BROWSER}
           mkdir -p .ci-trends/${BROWSER}
 
@@ -163,14 +166,15 @@ jobs:
             --trend-file .ci-trends/${BROWSER}/flaky-trend.json \
             --output-json test-results/flaky-trend.json \
             --output-md test-results/flaky-trend.md \
-            --max-runs 60 \
+            --max-runs 90 \
             --run-id "${{ github.run_id }}" \
             --run-number "${{ github.run_number }}" \
             --workflow "${{ github.workflow }}" \
             --ref "${{ github.ref_name }}" \
             --sha "${{ github.sha }}" \
             --browser "${BROWSER}" \
-            --event "${{ github.event_name }}"
+            --event "${{ github.event_name }}" \
+            --github-summary
 
       - name: Setup Java for Allure
         if: always()

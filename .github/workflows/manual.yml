@@ -44,6 +44,9 @@ jobs:
         run: |
           mkdir -p allure-results
           mkdir -p test-results
+          mkdir -p test-results/artifacts
+          mkdir -p test-results/videos
+          mkdir -p test-results/videos/${{ matrix.browser }}
 
       - name: Run pytest suite
         run: |

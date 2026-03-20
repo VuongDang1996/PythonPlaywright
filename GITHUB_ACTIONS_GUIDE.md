@@ -2,6 +2,28 @@
 
 This guide explains how to use the GitHub Actions workflow specifically configured for running individual test cases in the `tests/specs/automation-exercise/individual-tests` folder.
 
+## Python CI Quick Triage (Current Pipelines)
+
+For current Python framework runs, use these workflows first:
+
+- `.github/workflows/python-pytest.yml` for PR/main validation.
+- `.github/workflows/python-pytest-nightly.yml` for nightly cross-browser regression.
+- `.github/workflows/manual.yml` for manual browser runs.
+
+Use this order when diagnosing failures:
+
+1. Open the job summary and read the Python test summary table.
+2. Check the Flaky Trend section for pass-rate and failed/flaky deltas.
+3. Download metrics artifacts (`summary.md`, `summary.json`, `flaky-trend.md`, `flaky-trend.json`).
+4. Open Allure report artifact (or GitHub Pages report on main) for step-level details and attachments.
+
+Primary artifact names:
+
+- `python-pytest-metrics-*`
+- `python-nightly-metrics-*`
+- `python-pytest-allure-report-*`
+- `python-nightly-allure-report-*`
+
 ## 📋 Workflow Overview
 
 The **Individual Tests with Allure Report** workflow is designed to:

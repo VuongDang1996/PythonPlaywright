@@ -248,6 +248,13 @@ python scripts/summarize_junit.py --input test-results/junit-python.xml --output
 python scripts/update_flaky_trend.py --summary-json test-results/summary.json --trend-file test-results/flaky-trend.json --output-json test-results/flaky-trend.json --output-md test-results/flaky-trend.md --run-id local --run-number 1 --workflow local --ref local --sha local --browser chromium --event manual
 ```
 
+CI triage flow (recommended order):
+
+1. Open the GitHub job summary and check the latest Python summary table (failed/error split, pass rate, and duration).
+2. Read the Flaky Trend section for status (improved, flat, mixed, regressed) and delta vs previous run.
+3. Download `python-pytest-metrics-*` or `python-nightly-metrics-*` artifacts for `summary.md`, `summary.json`, and `flaky-trend.json` details.
+4. Open the Allure artifact (or GitHub Pages report on main) for step-level traces and screenshots.
+
 ## GitHub Actions Workflows
 
 Primary Python workflows:
