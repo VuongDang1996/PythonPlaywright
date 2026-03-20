@@ -1,10 +1,6 @@
-name: Playwright Tests
+name: Manual Python Playwright
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       browser:
@@ -20,7 +16,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -28,25 +24,62 @@ jobs:
         browser: ${{ github.event.inputs.browser == 'all' && fromJSON('["chromium", "firefox", "webkit"]') || fromJSON(format('["{0}"]', github.event.inputs.browser || 'chromium')) }}
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - uses: actions/setup-node@v4
-      with:
-        node-version: 18
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps ${{ matrix.browser }}
-      
-    - name: Run Playwright tests
-      run: npx playwright test --project=${{ matrix.browser }}
-      
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-report-${{ matrix.browser }}
-        path: playwright-report/
-        retention-days: 30
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Install Playwright Browser
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Create output folders
+        run: |
+          mkdir -p allure-results
+          mkdir -p test-results
+
+      - name: Run pytest suite
+        run: |
+          python -m pytest pytests/specs \
+            --browser=${{ matrix.browser }} \
+            --alluredir=allure-results \
+            --junitxml=test-results/junit-python.xml \
+            -q
+        env:
+          CI: true
+
+      - name: Upload JUnit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-python-junit-${{ matrix.browser }}
+          path: test-results/junit-python.xml
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload Allure raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-python-allure-${{ matrix.browser }}
+          path: allure-results/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-python-failures-${{ matrix.browser }}
+          path: |
+            test-results/artifacts/
+            test-results/videos/
+          retention-days: 14
+          if-no-files-found: ignore

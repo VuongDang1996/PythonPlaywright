@@ -21,6 +21,10 @@ playwright install
 pytest -m smoke
 ```
 
+Detailed run instructions:
+
+- See [PYTHON_FRAMEWORK_RUN_GUIDE.md](PYTHON_FRAMEWORK_RUN_GUIDE.md)
+
 ## 🚀 Features
 
 - **Page Object Model (POM)** - Clean separation of test logic and page interactions
