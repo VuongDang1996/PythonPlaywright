@@ -45,6 +45,9 @@ jobs:
 
       - name: Create output folders
         run: |
+          rm -rf test-results/artifacts
+          rm -rf test-results/videos
+          rm -rf test-results/failure-evidence
           mkdir -p allure-results
           mkdir -p test-results
           mkdir -p test-results/artifacts
@@ -82,6 +85,18 @@ jobs:
             --title "Manual Failure Evidence (${{ matrix.browser }})" \
             --github-summary
 
+      - name: Build clean manual failure evidence bundle
+        if: always()
+        run: |
+          python scripts/prepare_failure_evidence_bundle.py \
+            --artifacts-dir test-results/artifacts \
+            --videos-dir test-results/videos \
+            --bundle-dir test-results/failure-evidence \
+            --output-json test-results/evidence-bundle.json \
+            --output-md test-results/evidence-bundle.md \
+            --title "Manual Failure Evidence Bundle (${{ matrix.browser }})" \
+            --github-summary
+
       - name: Upload JUnit artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,6 +108,8 @@ jobs:
             test-results/summary.md
             test-results/evidence-summary.json
             test-results/evidence-summary.md
+            test-results/evidence-bundle.json
+            test-results/evidence-bundle.md
           retention-days: 30
           if-no-files-found: ignore
 
@@ -110,8 +127,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: manual-python-failures-${{ matrix.browser }}
-          path: |
-            test-results/artifacts/
-            test-results/videos/
+          path: test-results/failure-evidence/
           retention-days: 14
           if-no-files-found: ignore

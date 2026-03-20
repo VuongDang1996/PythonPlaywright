@@ -77,6 +77,9 @@ jobs:
 
       - name: Create output folders
         run: |
+          rm -rf test-results/artifacts
+          rm -rf test-results/videos
+          rm -rf test-results/${{ matrix.browser }}/failure-evidence
           mkdir -p allure-results/${{ matrix.browser }}
           mkdir -p test-results/${{ matrix.browser }}
           mkdir -p test-results/artifacts
@@ -143,6 +146,18 @@ jobs:
             --title "Nightly Failure Evidence (${{ matrix.browser }})" \
             --github-summary
 
+      - name: Build clean nightly failure evidence bundle
+        if: always()
+        run: |
+          python scripts/prepare_failure_evidence_bundle.py \
+            --artifacts-dir test-results/artifacts \
+            --videos-dir test-results/videos \
+            --bundle-dir test-results/${{ matrix.browser }}/failure-evidence \
+            --output-json test-results/${{ matrix.browser }}/evidence-bundle.json \
+            --output-md test-results/${{ matrix.browser }}/evidence-bundle.md \
+            --title "Nightly Failure Evidence Bundle (${{ matrix.browser }})" \
+            --github-summary
+
       - name: Persist nightly Allure history payload
         if: always()
         run: |
@@ -180,6 +195,8 @@ jobs:
             test-results/${{ matrix.browser }}/flaky-trend.md
             test-results/${{ matrix.browser }}/evidence-summary.json
             test-results/${{ matrix.browser }}/evidence-summary.md
+            test-results/${{ matrix.browser }}/evidence-bundle.json
+            test-results/${{ matrix.browser }}/evidence-bundle.md
           retention-days: 90
 
       - name: Upload nightly Allure raw results
@@ -196,9 +213,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-nightly-failures-${{ matrix.browser }}-${{ github.run_number }}
-          path: |
-            test-results/artifacts/
-            test-results/videos/
+          path: test-results/${{ matrix.browser }}/failure-evidence/
           retention-days: 14
           if-no-files-found: ignore
 
