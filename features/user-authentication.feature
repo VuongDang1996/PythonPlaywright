@@ -12,8 +12,9 @@ Feature: User Authentication
     When I enter correct email "test@example.com" and password "password123"
     And I click 'Login' button
     Then I should see 'Logged in as username' is visible
-    When I click 'Delete Account' button
-    Then I should see 'ACCOUNT DELETED!' is visible
+    When I click 'Logout' button
+    Then I should be navigated to login page
+    And I should see 'Login to your account' is visible
 
   @smoke @authentication @negative
   Scenario: TC03 - Login User with incorrect email and password

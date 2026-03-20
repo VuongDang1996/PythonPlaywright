@@ -66,6 +66,7 @@ env:
   BROWSER: ${{ github.event.inputs.browser || 'chromium' }}
   PARALLEL_WORKERS: ${{ github.event.inputs.parallel_workers || 'auto' }}
   TEST_SCOPE: ${{ github.event.inputs.test_scope || (github.event_name == 'pull_request' && 'smoke' || 'full') }}
+  BDD_TAGS: ${{ (github.event.inputs.test_scope == 'smoke' && '@smoke') || (github.event_name == 'pull_request' && '@smoke' || '') }}
 
 jobs:
   test-python:
@@ -352,4 +353,66 @@ jobs:
           name: python-pytest-failures-${{ github.run_number }}
           path: test-results/failure-evidence/
           retention-days: 14
+          if-no-files-found: ignore
+
+  test-behave:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Install Playwright browser
+        run: |
+          python -m playwright install --with-deps ${BROWSER}
+
+      - name: Create Behave output folders
+        run: |
+          mkdir -p test-results/behave-junit
+
+      - name: Run Behave suite
+        run: |
+          if [ -n "${BDD_TAGS}" ]; then
+            echo "Running Behave with tags: ${BDD_TAGS}"
+            python -m behave features --tags "${BDD_TAGS}" --junit --junit-directory test-results/behave-junit | tee test-results/behave-output.txt
+          else
+            echo "Running full Behave suite"
+            python -m behave features --junit --junit-directory test-results/behave-junit | tee test-results/behave-output.txt
+          fi
+        env:
+          CI: true
+
+      - name: Generate Behave summary
+        if: always()
+        run: |
+          python scripts/summarize_junit.py \
+            --input test-results/behave-junit \
+            --output-json test-results/behave-summary.json \
+            --output-md test-results/behave-summary.md \
+            --title "Behave BDD Summary (${BROWSER})" \
+            --github-summary
+
+      - name: Upload Behave artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behave-bdd-results-${{ github.run_number }}
+          path: |
+            test-results/behave-junit/
+            test-results/behave-output.txt
+            test-results/behave-summary.json
+            test-results/behave-summary.md
+          retention-days: 30
           if-no-files-found: ignore

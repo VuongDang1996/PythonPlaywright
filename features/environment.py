@@ -6,7 +6,12 @@ from playwright.sync_api import sync_playwright
 from pytests.data.automation_exercise_data import build_sample_registration_data
 from pytests.pages.auth.automation_exercise_login_page import AutomationExerciseLoginPage
 from pytests.pages.auth.automation_exercise_signup_page import AutomationExerciseSignupPage
+from pytests.pages.automation_exercise_cart_page import AutomationExerciseCartPage
 from pytests.pages.automation_exercise_home_page import AutomationExerciseHomePage
+from pytests.pages.automation_exercise_product_detail_page import (
+    AutomationExerciseProductDetailPage,
+)
+from pytests.pages.automation_exercise_products_page import AutomationExerciseProductsPage
 
 
 def before_all(context):
@@ -35,6 +40,9 @@ def before_scenario(context, scenario):
     context.home_page = AutomationExerciseHomePage(context.page)
     context.login_page = AutomationExerciseLoginPage(context.page)
     context.signup_page = AutomationExerciseSignupPage(context.page)
+    context.products_page = AutomationExerciseProductsPage(context.page)
+    context.product_detail_page = AutomationExerciseProductDetailPage(context.page)
+    context.cart_page = AutomationExerciseCartPage(context.page)
 
     context.user_data = build_sample_registration_data()
     context.user_data["email"] = f"bdd{int(time.time() * 1000)}@example.com"

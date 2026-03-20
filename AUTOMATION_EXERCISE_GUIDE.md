@@ -354,6 +354,38 @@ The framework includes GitHub Actions workflows that will:
 - Upload screenshots and videos on failures
 - Comment on PRs with test results
 
+## Python Behave BDD Execution Report
+
+The repository also includes a Python Behave BDD layer under `features/`.
+
+Run locally:
+
+```bash
+python -m behave features
+python -m behave features --tags @smoke
+python -m behave features --dry-run
+python -m behave features --junit --junit-directory test-results/behave-junit
+```
+
+CI behavior:
+
+- Workflow: `.github/workflows/python-pytest.yml`
+- Job: `test-behave`
+- Tag strategy:
+  - Pull requests run `@smoke`
+  - Push and default manual runs execute full BDD suite
+  - Manual dispatch with `test_scope=smoke` runs `@smoke`
+- Artifacts:
+  - `behave-bdd-results-<run_number>`
+  - includes `behave-output.txt`, JUnit XML files, `behave-summary.json`, and `behave-summary.md`
+
+Recommended triage order for BDD failures:
+
+1. Open workflow job logs for `test-behave`.
+2. Read `behave-output.txt` to locate the first failing scenario and step.
+3. Inspect `behave-summary.md` for pass/fail counts and durations.
+4. Re-run only impacted scenarios locally with `--tags` or target feature path.
+
 ## 🔧 Customization
 
 ### Adding New Locators

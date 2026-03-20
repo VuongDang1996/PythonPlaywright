@@ -10,6 +10,7 @@ This repository is a Python-first end-to-end test automation framework for Autom
 - Parallel execution with pytest-xdist
 - Allure raw results and HTML report generation
 - JUnit summary and flaky-trend scripts for CI insights
+- Behave BDD execution with tag-aware CI runs
 - GitHub Actions pipelines for PR, main, nightly, and manual runs
 
 ## Tech Stack
@@ -145,6 +146,15 @@ Run TC01 on Edge using suite file:
 python scripts/run_test_suite.py --suite test-suites/tc01-edge.json
 ```
 
+Run Behave BDD scenarios:
+
+```bash
+python -m behave features
+python -m behave features --tags @smoke
+python -m behave features --dry-run
+python -m behave features --junit --junit-directory test-results/behave-junit
+```
+
 ## Suite File Guideline (Like Selenium TestNG XML)
 
 Use JSON files in `test-suites/` to control what runs, what is skipped, which browsers are used, and how parallel execution is configured.
@@ -254,6 +264,7 @@ CI triage flow (recommended order):
 2. Read the Flaky Trend section for status (improved, flat, mixed, regressed) and delta vs previous run.
 3. Download `python-pytest-metrics-*` or `python-nightly-metrics-*` artifacts for `summary.md`, `summary.json`, and `flaky-trend.json` details.
 4. Open the Allure artifact (or GitHub Pages report on main) for step-level traces and screenshots.
+5. Download `behave-bdd-results-*` for BDD command output (`behave-output.txt`) and BDD JUnit/summary files.
 
 ## GitHub Actions Workflows
 
@@ -263,6 +274,7 @@ Primary Python workflows:
   - PR/main validation pipeline
   - quality gates
   - parallel pytest
+  - Behave BDD job (`test-behave`) with tag expression support (`@smoke` on PR, full on push by default)
   - Allure artifact and optional Pages publish
   - JUnit summary and flaky trend artifacts
 
