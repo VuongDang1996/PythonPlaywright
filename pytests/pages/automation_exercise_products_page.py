@@ -1,9 +1,13 @@
+from playwright.sync_api import Page
+
+from pytests.components.cart_modal_component import CartModalComponent
 from pytests.pages.base_page import BasePage
 
 
 class AutomationExerciseProductsPage(BasePage):
-    def __init__(self, page):
+    def __init__(self, page: Page) -> None:
         super().__init__(page)
+        self.cart_modal = CartModalComponent(page)
         self.all_products_title = page.locator(
             'h2:has-text("All Products"), h2.title.text-center:has-text("All Products")'
         )
@@ -13,8 +17,8 @@ class AutomationExerciseProductsPage(BasePage):
         self.search_button = page.locator("#submit_search")
         self.searched_products_title = page.locator('h2:has-text("Searched Products")')
         self.search_results = page.locator(".features_items .product-image-wrapper")
-        self.continue_shopping_button = page.locator('button:has-text("Continue Shopping")')
-        self.view_cart_button = page.locator('a:has-text("View Cart")').first
+        self.continue_shopping_button = self.cart_modal.continue_shopping_button
+        self.view_cart_button = self.cart_modal.view_cart_button
 
     def click_view_product(self, index: int = 0) -> None:
         self.view_product_links.nth(index).click()
@@ -42,10 +46,10 @@ class AutomationExerciseProductsPage(BasePage):
         fallback_button.click(timeout=10_000, force=True)
 
     def click_continue_shopping(self) -> None:
-        self.continue_shopping_button.click()
+        self.cart_modal.click_continue_shopping()
 
     def click_view_cart(self) -> None:
-        self.view_cart_button.click()
+        self.cart_modal.click_view_cart()
 
     def add_search_results_to_cart(self, product_count: int | None = None) -> None:
         count = product_count or self.get_search_results_count()

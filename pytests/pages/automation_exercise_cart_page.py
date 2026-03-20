@@ -1,8 +1,10 @@
+from playwright.sync_api import Page
+
 from pytests.pages.base_page import BasePage
 
 
 class AutomationExerciseCartPage(BasePage):
-    def __init__(self, page):
+    def __init__(self, page: Page) -> None:
         super().__init__(page)
         self.cart_table = page.locator("#cart_info_table")
         self.cart_items = page.locator("tbody tr")
@@ -18,31 +20,13 @@ class AutomationExerciseCartPage(BasePage):
         return self.cart_items.count()
 
     def get_product_quantities(self) -> list[int]:
-        quantities: list[int] = []
-        count = self.product_quantities.count()
-        for i in range(count):
-            quantity = self.product_quantities.nth(i).text_content()
-            if quantity:
-                quantities.append(int(quantity.strip()))
-        return quantities
+        return self.get_int_values(self.product_quantities)
 
     def get_product_prices(self) -> list[str]:
-        prices: list[str] = []
-        count = self.product_prices.count()
-        for i in range(count):
-            price = self.product_prices.nth(i).text_content()
-            if price:
-                prices.append(price.strip())
-        return prices
+        return self.get_text_values(self.product_prices)
 
     def get_product_totals(self) -> list[str]:
-        totals: list[str] = []
-        count = self.product_totals.count()
-        for i in range(count):
-            total = self.product_totals.nth(i).text_content()
-            if total:
-                totals.append(total.strip())
-        return totals
+        return self.get_text_values(self.product_totals)
 
     def click_proceed_to_checkout(self) -> None:
         self.proceed_to_checkout_button.click()

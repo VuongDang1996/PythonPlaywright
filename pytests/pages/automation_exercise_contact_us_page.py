@@ -1,8 +1,12 @@
+from typing import Any
+
+from playwright.sync_api import Dialog, Page
+
 from pytests.pages.base_page import BasePage
 
 
 class AutomationExerciseContactUsPage(BasePage):
-    def __init__(self, page):
+    def __init__(self, page: Page) -> None:
         super().__init__(page)
         self.get_in_touch_title = page.locator('h2:has-text("Get In Touch")')
         self.name_input = page.locator('input[data-qa="name"]')
@@ -12,14 +16,14 @@ class AutomationExerciseContactUsPage(BasePage):
         self.file_upload_input = page.locator('input[name="upload_file"]')
         self.submit_button = page.locator('input[data-qa="submit-button"]')
         self.success_message = page.locator(
-            '.status.alert.alert-success, '
+            ".status.alert.alert-success, "
             'div:has-text("Success! Your details have been submitted successfully")'
         )
         self.home_button = page.locator(
             'a:has-text("Home"), .btn.btn-success:has-text("Home")'
         ).first
 
-    def fill_contact_form(self, contact_data: dict) -> None:
+    def fill_contact_form(self, contact_data: dict[str, Any]) -> None:
         self.name_input.fill(contact_data["name"])
         self.email_input.fill(contact_data["email"])
         self.subject_input.fill(contact_data["subject"])
@@ -31,7 +35,7 @@ class AutomationExerciseContactUsPage(BasePage):
     def submit_form(self) -> None:
         dialog_handled = False
 
-        def dialog_handler(dialog):
+        def dialog_handler(dialog: Dialog) -> None:
             nonlocal dialog_handled
             dialog_handled = True
             dialog.accept()
@@ -50,8 +54,6 @@ class AutomationExerciseContactUsPage(BasePage):
                 self.submit_button.click()
 
             self.page.wait_for_timeout(2_000)
-            if not dialog_handled:
-                pass
         finally:
             self.page.remove_listener("dialog", dialog_handler)
 

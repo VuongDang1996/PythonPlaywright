@@ -2,6 +2,25 @@
 
 A comprehensive end-to-end testing framework built with Playwright and TypeScript, implementing the Page Object Model design pattern with advanced Allure reporting for maintainable and scalable test automation.
 
+## Python Playwright Modernization Additions
+
+The project now also includes a modernized Python Playwright layer under pytests/ with these enhancements:
+
+- Typed runtime configuration via pytests/config/settings.py using environment variables from .env
+- Layered architecture guide in pytests/ARCHITECTURE.md for consistent contributions
+- Resilient navigation and fallback click patterns in the base page object
+- Automatic screenshot + Playwright trace capture on pytest failures
+- Optional video capture support for failed tests
+- Environment-driven credentials for safer, portable test execution
+
+Quick run example:
+
+```bash
+pip install -r requirements.txt
+playwright install
+pytest -m smoke
+```
+
 ## 🚀 Features
 
 - **Page Object Model (POM)** - Clean separation of test logic and page interactions

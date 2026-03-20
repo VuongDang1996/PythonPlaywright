@@ -1,0 +1,278 @@
+name: Python Pytest Nightly Regression
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      parallel_workers:
+        description: 'Number of pytest workers per browser job'
+        required: false
+        default: '4'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: python-nightly-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  BASE_URL: 'https://automationexercise.com'
+
+jobs:
+  nightly-regression:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Quality checks (ruff, black, mypy)
+        run: |
+          python -m ruff check pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
+          python -m black --check pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
+          python -m mypy pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
+
+      - name: Install Playwright browser
+        run: |
+          python -m playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Restore Allure history cache
+        id: restore-allure-history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/${{ matrix.browser }}
+          key: allure-history-${{ github.ref_name }}-${{ matrix.browser }}-${{ github.run_id }}
+          restore-keys: |
+            allure-history-${{ github.ref_name }}-${{ matrix.browser }}-
+
+      - name: Restore flaky trend cache
+        id: restore-flaky-trend
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-trends/${{ matrix.browser }}
+          key: flaky-trend-${{ github.ref_name }}-${{ matrix.browser }}-${{ github.run_id }}
+          restore-keys: |
+            flaky-trend-${{ github.ref_name }}-${{ matrix.browser }}-
+
+      - name: Create output folders
+        run: |
+          mkdir -p allure-results/${{ matrix.browser }}
+          mkdir -p test-results/${{ matrix.browser }}
+          mkdir -p .allure-history/${{ matrix.browser }}
+          mkdir -p .ci-trends/${{ matrix.browser }}
+
+      - name: Seed Allure history from cache
+        run: |
+          if [ -d ".allure-history/${{ matrix.browser }}/history" ]; then
+            mkdir -p allure-results/${{ matrix.browser }}/history
+            cp -R ".allure-history/${{ matrix.browser }}/history/." allure-results/${{ matrix.browser }}/history/
+          fi
+
+      - name: Run nightly pytest suite
+        run: |
+          python -m pytest pytests/specs \
+            --browser=${{ matrix.browser }} \
+            --reruns=2 --reruns-delay=1 \
+            --alluredir=allure-results/${{ matrix.browser }} \
+            --junitxml=test-results/${{ matrix.browser }}/junit-python.xml \
+            -n ${{ github.event.inputs.parallel_workers || '4' }} \
+            -q
+        env:
+          CI: true
+
+      - name: Generate nightly test summary
+        if: always()
+        run: |
+          python scripts/summarize_junit.py \
+            --input test-results/${{ matrix.browser }}/junit-python.xml \
+            --output-json test-results/${{ matrix.browser }}/summary.json \
+            --output-md test-results/${{ matrix.browser }}/summary.md \
+            --title "Python Nightly Summary (${{ matrix.browser }})" \
+            --github-summary
+
+      - name: Update nightly flaky trend
+        if: always()
+        run: |
+          python scripts/update_flaky_trend.py \
+            --summary-json test-results/${{ matrix.browser }}/summary.json \
+            --trend-file .ci-trends/${{ matrix.browser }}/flaky-trend.json \
+            --output-json test-results/${{ matrix.browser }}/flaky-trend.json \
+            --output-md test-results/${{ matrix.browser }}/flaky-trend.md \
+            --max-runs 90 \
+            --run-id "${{ github.run_id }}" \
+            --run-number "${{ github.run_number }}" \
+            --workflow "${{ github.workflow }}" \
+            --ref "${{ github.ref_name }}" \
+            --sha "${{ github.sha }}" \
+            --browser "${{ matrix.browser }}" \
+            --event "${{ github.event_name }}"
+
+      - name: Persist nightly Allure history payload
+        if: always()
+        run: |
+          mkdir -p .allure-history/${{ matrix.browser }}/history
+          if [ -d allure-results/${{ matrix.browser }}/history ]; then
+            rm -rf .allure-history/${{ matrix.browser }}/history
+            mkdir -p .allure-history/${{ matrix.browser }}/history
+            cp -R allure-results/${{ matrix.browser }}/history/. .allure-history/${{ matrix.browser }}/history/
+          fi
+
+      - name: Save Allure history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/${{ matrix.browser }}
+          key: allure-history-${{ github.ref_name }}-${{ matrix.browser }}-${{ github.run_id }}
+
+      - name: Save flaky trend cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-trends/${{ matrix.browser }}
+          key: flaky-trend-${{ github.ref_name }}-${{ matrix.browser }}-${{ github.run_id }}
+
+      - name: Upload nightly JUnit and summary artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-nightly-metrics-${{ matrix.browser }}-${{ github.run_number }}
+          path: |
+            test-results/${{ matrix.browser }}/junit-python.xml
+            test-results/${{ matrix.browser }}/summary.json
+            test-results/${{ matrix.browser }}/summary.md
+            test-results/${{ matrix.browser }}/flaky-trend.json
+            test-results/${{ matrix.browser }}/flaky-trend.md
+          retention-days: 90
+
+      - name: Upload nightly Allure raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-nightly-allure-${{ matrix.browser }}-${{ github.run_number }}
+          path: |
+            allure-results/${{ matrix.browser }}/
+          retention-days: 30
+
+      - name: Upload nightly failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-nightly-failures-${{ matrix.browser }}-${{ github.run_number }}
+          path: |
+            test-results/artifacts/
+            test-results/videos/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  publish-nightly-allure:
+    needs: nightly-regression
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download nightly allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-nightly-allure-*-${{ github.run_number }}
+          merge-multiple: true
+          path: combined-allure-results
+
+      - name: Restore combined nightly Allure history cache
+        id: restore-nightly-history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/nightly-combined
+          key: allure-history-nightly-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            allure-history-nightly-${{ github.ref_name }}-
+
+      - name: Seed combined history
+        run: |
+          mkdir -p combined-allure-results
+          if [ -d ".allure-history/nightly-combined/history" ]; then
+            mkdir -p combined-allure-results/history
+            cp -R .allure-history/nightly-combined/history/. combined-allure-results/history/
+          fi
+
+      - name: Setup Java for Allure
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Allure CLI
+        run: |
+          curl -o allure-2.24.0.tgz -Ls https://github.com/allure-framework/allure2/releases/download/2.24.0/allure-2.24.0.tgz
+          tar -zxf allure-2.24.0.tgz
+          sudo mv allure-2.24.0 /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/bin/allure
+          allure --version
+
+      - name: Generate combined nightly Allure report
+        run: |
+          allure generate combined-allure-results --clean -o allure-report-nightly
+
+      - name: Upload combined nightly Allure report
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-nightly-allure-report-${{ github.run_number }}
+          path: allure-report-nightly/
+          retention-days: 30
+
+      - name: Persist combined nightly history payload
+        if: always()
+        run: |
+          mkdir -p .allure-history/nightly-combined/history
+          if [ -d allure-report-nightly/history ]; then
+            rm -rf .allure-history/nightly-combined/history
+            mkdir -p .allure-history/nightly-combined/history
+            cp -R allure-report-nightly/history/. .allure-history/nightly-combined/history/
+          fi
+
+      - name: Save combined nightly history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/nightly-combined
+          key: allure-history-nightly-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Deploy nightly Allure report to GitHub Pages
+        if: always() && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report-nightly
+          destination_dir: python-nightly/latest
+          keep_files: true
+
+      - name: Add nightly report links to summary
+        if: always()
+        run: |
+          echo "## Python Nightly Allure Report" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "- Live report: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/python-nightly/latest" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- Artifact: python-nightly-allure-report-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY

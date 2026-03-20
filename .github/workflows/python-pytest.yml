@@ -7,16 +7,24 @@ on:
       - 'pytests/**'
       - 'features/**'
       - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'pyproject.toml'
+      - 'scripts/**'
       - 'pytest.ini'
       - '.github/workflows/python-pytest.yml'
+      - '.github/workflows/python-pytest-nightly.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'pytests/**'
       - 'features/**'
       - 'requirements.txt'
+      - 'requirements-dev.txt'
+      - 'pyproject.toml'
+      - 'scripts/**'
       - 'pytest.ini'
       - '.github/workflows/python-pytest.yml'
+      - '.github/workflows/python-pytest-nightly.yml'
   workflow_dispatch:
     inputs:
       browser:
@@ -28,10 +36,35 @@ on:
           - chromium
           - firefox
           - webkit
+      parallel_workers:
+        description: 'Number of pytest workers (auto or integer)'
+        required: false
+        default: 'auto'
+        type: string
+      test_scope:
+        description: 'Test scope for dispatch runs'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - smoke
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: python-pytest-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: '3.12'
   BASE_URL: 'https://automationexercise.com'
+  BROWSER: ${{ github.event.inputs.browser || 'chromium' }}
+  PARALLEL_WORKERS: ${{ github.event.inputs.parallel_workers || 'auto' }}
+  TEST_SCOPE: ${{ github.event.inputs.test_scope || (github.event_name == 'pull_request' && 'smoke' || 'full') }}
 
 jobs:
   test-python:
@@ -51,33 +84,237 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Quality checks (ruff, black, mypy)
+        run: |
+          python -m ruff check pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
+          python -m black --check pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
+          python -m mypy pytests/config pytests/components pytests/pages pytests/data pytests/conftest.py
 
       - name: Install Playwright browser
         run: |
-          python -m playwright install --with-deps ${{ github.event.inputs.browser || 'chromium' }}
+          python -m playwright install --with-deps ${BROWSER}
+
+      - name: Restore Allure history cache
+        id: restore-allure-history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/${{ env.BROWSER }}
+          key: allure-history-${{ github.ref_name }}-${{ env.BROWSER }}-${{ github.run_id }}
+          restore-keys: |
+            allure-history-${{ github.ref_name }}-${{ env.BROWSER }}-
+
+      - name: Restore flaky trend cache
+        id: restore-flaky-trend
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci-trends/${{ env.BROWSER }}
+          key: flaky-trend-${{ github.ref_name }}-${{ env.BROWSER }}-${{ github.run_id }}
+          restore-keys: |
+            flaky-trend-${{ github.ref_name }}-${{ env.BROWSER }}-
 
       - name: Create output folders
         run: |
           mkdir -p allure-results
           mkdir -p test-results
+          mkdir -p .allure-history/${BROWSER}
+          mkdir -p .ci-trends/${BROWSER}
+
+      - name: Seed Allure history from cache
+        run: |
+          if [ -d ".allure-history/${BROWSER}/history" ]; then
+            mkdir -p allure-results/history
+            cp -R ".allure-history/${BROWSER}/history/." allure-results/history/
+          fi
 
       - name: Run pytest suite
         run: |
+          MARKER_ARGS=""
+          if [ "${TEST_SCOPE}" = "smoke" ]; then
+            MARKER_ARGS="-m smoke"
+          fi
+
           python -m pytest pytests/specs \
-            --browser=${{ github.event.inputs.browser || 'chromium' }} \
+            --browser=${BROWSER} \
             --alluredir=allure-results \
             --junitxml=test-results/junit-python.xml \
+            -n ${PARALLEL_WORKERS} \
+            ${MARKER_ARGS} \
             -q
         env:
           CI: true
 
-      - name: Upload pytest artifacts
+      - name: Generate test summary
+        if: always()
+        run: |
+          python scripts/summarize_junit.py \
+            --input test-results/junit-python.xml \
+            --output-json test-results/summary.json \
+            --output-md test-results/summary.md \
+            --title "Python Pytest Summary (${BROWSER})" \
+            --github-summary
+
+      - name: Update flaky trend
+        if: always()
+        run: |
+          python scripts/update_flaky_trend.py \
+            --summary-json test-results/summary.json \
+            --trend-file .ci-trends/${BROWSER}/flaky-trend.json \
+            --output-json test-results/flaky-trend.json \
+            --output-md test-results/flaky-trend.md \
+            --max-runs 60 \
+            --run-id "${{ github.run_id }}" \
+            --run-number "${{ github.run_number }}" \
+            --workflow "${{ github.workflow }}" \
+            --ref "${{ github.ref_name }}" \
+            --sha "${{ github.sha }}" \
+            --browser "${BROWSER}" \
+            --event "${{ github.event_name }}"
+
+      - name: Setup Java for Allure
+        if: always()
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Allure CLI
+        if: always()
+        run: |
+          curl -o allure-2.24.0.tgz -Ls https://github.com/allure-framework/allure2/releases/download/2.24.0/allure-2.24.0.tgz
+          tar -zxf allure-2.24.0.tgz
+          sudo mv allure-2.24.0 /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/bin/allure
+          allure --version
+
+      - name: Generate Allure report
+        if: always()
+        run: |
+          allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: python-pytest-results-${{ github.run_number }}
+          name: python-pytest-allure-report-${{ github.run_number }}
+          path: allure-report/
+          retention-days: 30
+
+      - name: Deploy Allure report to GitHub Pages
+        if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          destination_dir: python-pytest/latest
+          keep_files: true
+
+      - name: Add report links to job summary
+        if: always()
+        run: |
+          echo "## Python Allure Report" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "- Live report: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/python-pytest/latest" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- Artifact: python-pytest-allure-report-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Persist Allure history cache payload
+        if: always()
+        run: |
+          mkdir -p .allure-history/${BROWSER}/history
+          if [ -d allure-report/history ]; then
+            rm -rf .allure-history/${BROWSER}/history
+            mkdir -p .allure-history/${BROWSER}/history
+            cp -R allure-report/history/. .allure-history/${BROWSER}/history/
+          fi
+
+      - name: Save Allure history cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/${{ env.BROWSER }}
+          key: allure-history-${{ github.ref_name }}-${{ env.BROWSER }}-${{ github.run_id }}
+
+      - name: Save flaky trend cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ci-trends/${{ env.BROWSER }}
+          key: flaky-trend-${{ github.ref_name }}-${{ env.BROWSER }}-${{ github.run_id }}
+
+      - name: Comment PR with python summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- python-pytest-summary -->';
+            let summary = 'Summary unavailable.';
+            let trend = '';
+            try { summary = fs.readFileSync('test-results/summary.md', 'utf8'); } catch (_) {}
+            try { trend = fs.readFileSync('test-results/flaky-trend.md', 'utf8'); } catch (_) {}
+
+            const body = `${marker}\n## Python CI Summary (${process.env.BROWSER || 'chromium'})\n\n${summary}\n${trend}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(
+              (comment) => comment.user.type === 'Bot' && comment.body && comment.body.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
+      - name: Upload JUnit and summary artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-pytest-metrics-${{ github.run_number }}
+          path: |
+            test-results/junit-python.xml
+            test-results/summary.json
+            test-results/summary.md
+            test-results/flaky-trend.json
+            test-results/flaky-trend.md
+          retention-days: 90
+
+      - name: Upload Allure raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-pytest-allure-${{ github.run_number }}
           path: |
             allure-results/
-            test-results/
           retention-days: 30
+
+      - name: Upload failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-pytest-failures-${{ github.run_number }}
+          path: |
+            test-results/artifacts/
+            test-results/videos/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,24 +1,30 @@
+from pytests.components.navigation_component import NavigationComponent
+from pytests.components.subscription_component import SubscriptionComponent
 from pytests.pages.base_page import BasePage
 
 
 class AutomationExerciseHomePage(BasePage):
     def __init__(self, page):
         super().__init__(page)
-        self.signup_login_link = page.locator('a[href="/login"]').first
-        self.contact_us_link = page.locator('a[href="/contact_us"]').first
-        self.test_cases_link = page.locator('a[href="/test_cases"]').first
-        self.products_link = page.locator('a[href="/products"]').first
-        self.cart_link = page.locator('a[href="/view_cart"]').first
-        self.logout_link = page.locator('a[href="/logout"]')
-        self.delete_account_link = page.locator('a[href="/delete_account"]')
-        self.logged_in_as_user = page.locator('li:has-text("Logged in as")')
+        self.navigation = NavigationComponent(page)
+        self.subscription = SubscriptionComponent(page)
+
+        # Backward-compatible aliases to avoid breaking existing tests.
+        self.signup_login_link = self.navigation.signup_login_link
+        self.contact_us_link = self.navigation.contact_us_link
+        self.test_cases_link = self.navigation.test_cases_link
+        self.products_link = self.navigation.products_link
+        self.cart_link = self.navigation.cart_link
+        self.logout_link = self.navigation.logout_link
+        self.delete_account_link = self.navigation.delete_account_link
+        self.logged_in_as_user = self.navigation.logged_in_as_user
         self.home_page_carousel = page.locator("#slider-carousel")
         self.features_items = page.locator(".features_items")
-        self.subscription_section = page.locator("#footer")
-        self.subscription_title = page.locator('h2:has-text("Subscription")')
-        self.subscription_email_input = page.locator("#susbscribe_email")
-        self.subscription_submit_button = page.locator("#subscribe")
-        self.subscription_success_message = page.locator(".alert-success")
+        self.subscription_section = self.subscription.subscription_section
+        self.subscription_title = self.subscription.subscription_title
+        self.subscription_email_input = self.subscription.subscription_email_input
+        self.subscription_submit_button = self.subscription.subscription_submit_button
+        self.subscription_success_message = self.subscription.subscription_success_message
         self.recommended_items = page.locator(".recommended_items")
         self.recommended_items_title = page.locator('h2:has-text("recommended items")')
         self.scroll_up_button = page.locator("#scrollUp")
@@ -31,24 +37,7 @@ class AutomationExerciseHomePage(BasePage):
         self.brands_sidebar = page.locator(".brands_products")
 
     def navigate_to(self) -> None:
-        max_retries = 3
-        for attempt in range(1, max_retries + 1):
-            try:
-                try:
-                    self.page.goto("/", wait_until="load", timeout=45_000)
-                except Exception:
-                    try:
-                        self.page.goto("/", wait_until="networkidle", timeout=45_000)
-                    except Exception:
-                        self.page.goto("/", wait_until="domcontentloaded", timeout=30_000)
-                break
-            except Exception as error:
-                if attempt == max_retries:
-                    raise RuntimeError(
-                        f"Failed to navigate to home page after {max_retries} attempts: {error}"
-                    ) from error
-                self.page.wait_for_timeout(2_000)
-
+        self.goto_with_retry("/", retries=3, timeout=45_000)
         self.wait_for_basic_page_ready()
 
     def wait_for_basic_page_ready(self) -> None:
@@ -63,47 +52,31 @@ class AutomationExerciseHomePage(BasePage):
             pass
 
     def click_signup_login(self) -> None:
-        self.signup_login_link.click()
+        self.navigation.click_signup_login()
 
     def click_contact_us(self) -> None:
-        self.contact_us_link.click()
+        self.navigation.click_contact_us()
 
     def click_test_cases(self) -> None:
-        self.test_cases_link.click()
+        self.navigation.click_test_cases()
 
     def click_products(self) -> None:
-        try:
-            self.products_link.click(timeout=10_000)
-        except Exception:
-            self.page.goto("/products", wait_until="domcontentloaded", timeout=30_000)
-            return
-
-        if "/products" not in self.page.url:
-            self.page.goto("/products", wait_until="domcontentloaded", timeout=30_000)
+        self.navigation.click_products()
 
     def click_cart(self) -> None:
-        try:
-            self.cart_link.click(timeout=10_000)
-        except Exception:
-            self.page.goto("/view_cart", wait_until="domcontentloaded", timeout=30_000)
-            return
-
-        if "/view_cart" not in self.page.url:
-            self.page.goto("/view_cart", wait_until="domcontentloaded", timeout=30_000)
+        self.navigation.click_cart()
 
     def click_logout(self) -> None:
-        self.logout_link.click()
+        self.navigation.click_logout()
 
     def click_delete_account(self) -> None:
-        self.delete_account_link.click()
+        self.navigation.click_delete_account()
 
     def scroll_to_bottom(self) -> None:
-        self.subscription_section.scroll_into_view_if_needed()
+        self.subscription.scroll_to_subscription()
 
     def subscribe_to_newsletter(self, email: str) -> None:
-        self.subscription_section.scroll_into_view_if_needed()
-        self.subscription_email_input.fill(email)
-        self.subscription_submit_button.click()
+        self.subscription.subscribe(email)
 
     def add_recommended_item_to_cart(self, index: int = 0) -> None:
         self.recommended_items.scroll_into_view_if_needed()

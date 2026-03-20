@@ -43,8 +43,7 @@ def test_tc13_verify_product_quantity_in_cart(home_page, product_detail_page, ca
         product_detail_page.add_to_cart()
 
     with allure.step("Navigate to cart page"):
-        view_cart_button = home_page.page.locator('a:has-text("View Cart")').first
-        view_cart_button.click()
+        product_detail_page.click_view_cart()
 
     with allure.step("Verify product quantity in cart"):
         expect(cart_page.cart_table).to_be_visible()

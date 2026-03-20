@@ -1,49 +1,189 @@
-import time
+import os
+import re
+from pathlib import Path
 from typing import Any, Dict
 
 import pytest
 from dotenv import load_dotenv
 
-from pytests.data.automation_exercise_data import build_sample_registration_data
+from pytests.config.settings import FrameworkSettings, load_framework_settings
+
+from pytests.data.credentials import (
+    UserCredentials,
+    get_existing_user_credentials,
+    get_invalid_user_credentials,
+    get_valid_user_credentials,
+)
+from pytests.data.factories import build_registration_data
 from pytests.pages.automation_exercise_cart_page import AutomationExerciseCartPage
 from pytests.pages.automation_exercise_contact_us_page import AutomationExerciseContactUsPage
 from pytests.pages.automation_exercise_home_page import AutomationExerciseHomePage
-from pytests.pages.automation_exercise_product_detail_page import AutomationExerciseProductDetailPage
+from pytests.pages.automation_exercise_product_detail_page import (
+    AutomationExerciseProductDetailPage,
+)
 from pytests.pages.automation_exercise_products_page import AutomationExerciseProductsPage
 from pytests.pages.auth.automation_exercise_login_page import AutomationExerciseLoginPage
 from pytests.pages.auth.automation_exercise_signup_page import AutomationExerciseSignupPage
+
+allure: Any = None
+try:
+    import allure as _allure
+
+    allure = _allure
+except Exception:  # pragma: no cover - attachment is optional during local runs
+    allure = None
 
 
 load_dotenv()
 
 
-@pytest.fixture(scope="session")
-def base_url() -> str:
-    return "https://automationexercise.com"
+def _safe_artifact_name(nodeid: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_.-]+", "_", nodeid)
+
+
+def _get_worker_id() -> str:
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    return worker_id or "master"
+
+
+def _worker_artifact_dir() -> Path:
+    worker_id = _get_worker_id()
+    if worker_id == "master":
+        return Path("test-results") / "artifacts"
+    return Path("test-results") / "artifacts" / worker_id
+
+
+def _worker_safe_artifact_name(nodeid: str) -> str:
+    safe_name = _safe_artifact_name(nodeid)
+    worker_id = _get_worker_id()
+    if worker_id == "master":
+        return safe_name
+    return f"{worker_id}_{safe_name}"
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args: Dict[str, Any], base_url: str) -> Dict[str, Any]:
+def framework_settings() -> FrameworkSettings:
+    return load_framework_settings()
+
+
+@pytest.fixture(scope="session")
+def base_url(framework_settings: FrameworkSettings) -> str:
+    return framework_settings.base_url
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(
+    browser_type_launch_args: Dict[str, Any], framework_settings: FrameworkSettings
+) -> Dict[str, Any]:
     return {
-        **browser_context_args,
-        "base_url": base_url,
-        "ignore_https_errors": True,
-        "accept_downloads": True,
-        "viewport": {"width": 1280, "height": 720},
-        "locale": "en-US",
-        "timezone_id": "America/New_York",
-        "user_agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/91.0.4472.124 Safari/537.36"
-        ),
+        **browser_type_launch_args,
+        "headless": framework_settings.headless,
+        "slow_mo": framework_settings.slow_mo_ms,
     }
 
 
+@pytest.fixture(scope="session")
+def browser_context_args(
+    browser_context_args: Dict[str, Any],
+    base_url: str,
+    framework_settings: FrameworkSettings,
+) -> Dict[str, Any]:
+    context_args = {
+        **browser_context_args,
+        "base_url": base_url,
+        "ignore_https_errors": framework_settings.ignore_https_errors,
+        "accept_downloads": framework_settings.accept_downloads,
+        "viewport": {
+            "width": framework_settings.viewport_width,
+            "height": framework_settings.viewport_height,
+        },
+        "locale": framework_settings.locale,
+        "timezone_id": framework_settings.timezone_id,
+    }
+
+    if framework_settings.user_agent:
+        context_args["user_agent"] = framework_settings.user_agent
+
+    if framework_settings.video_on_failure:
+        worker_id = _get_worker_id()
+        video_dir = Path("test-results") / "videos" / worker_id
+        video_dir.mkdir(parents=True, exist_ok=True)
+        context_args["record_video_dir"] = str(video_dir)
+
+    return context_args
+
+
 @pytest.fixture(autouse=True)
-def configure_page(page) -> None:
-    page.set_default_timeout(30_000)
-    page.set_default_navigation_timeout(60_000)
+def configure_page(page, framework_settings: FrameworkSettings) -> None:
+    page.set_default_timeout(framework_settings.default_timeout_ms)
+    page.set_default_navigation_timeout(framework_settings.navigation_timeout_ms)
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    setattr(item, f"rep_{report.when}", report)
+
+
+@pytest.fixture(autouse=True)
+def capture_artifacts_on_failure(request, page, context, framework_settings: FrameworkSettings):
+    console_messages: list[str] = []
+
+    def _on_console_message(message) -> None:
+        console_messages.append(f"[{message.type}] {message.text}")
+
+    page.on("console", _on_console_message)
+
+    if framework_settings.trace_on_failure:
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+    yield
+
+    page.remove_listener("console", _on_console_message)
+
+    call_report = getattr(request.node, "rep_call", None)
+    failed = bool(call_report and call_report.failed)
+
+    if failed:
+        artifact_dir = _worker_artifact_dir()
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        artifact_name = _worker_safe_artifact_name(request.node.nodeid)
+
+        if framework_settings.screenshot_on_failure:
+            screenshot_path = artifact_dir / f"{artifact_name}.png"
+            page.screenshot(path=str(screenshot_path), full_page=True)
+            if allure:
+                allure.attach.file(
+                    str(screenshot_path),
+                    name="failure-screenshot",
+                    attachment_type=allure.attachment_type.PNG,
+                )
+
+        if console_messages:
+            console_path = artifact_dir / f"{artifact_name}.console.log"
+            console_path.write_text("\n".join(console_messages), encoding="utf-8")
+            if allure:
+                allure.attach.file(
+                    str(console_path),
+                    name="browser-console",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
+
+    if framework_settings.trace_on_failure:
+        if failed:
+            artifact_dir = _worker_artifact_dir()
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            trace_path = artifact_dir / f"{_worker_safe_artifact_name(request.node.nodeid)}.zip"
+            context.tracing.stop(path=str(trace_path))
+            if allure:
+                allure.attach.file(
+                    str(trace_path),
+                    name="playwright-trace",
+                    attachment_type=allure.attachment_type.ZIP,
+                )
+        else:
+            context.tracing.stop()
 
 
 @pytest.fixture
@@ -83,6 +223,44 @@ def cart_page(page) -> AutomationExerciseCartPage:
 
 @pytest.fixture
 def registration_data() -> Dict[str, str]:
-    data = build_sample_registration_data()
-    data["email"] = f"test{int(time.time() * 1000)}@example.com"
-    return data
+    return build_registration_data()
+
+
+@pytest.fixture
+def valid_user_credentials() -> UserCredentials:
+    return get_valid_user_credentials()
+
+
+@pytest.fixture
+def invalid_user_credentials() -> UserCredentials:
+    return get_invalid_user_credentials()
+
+
+@pytest.fixture
+def existing_user_credentials() -> UserCredentials:
+    return get_existing_user_credentials()
+
+
+@pytest.fixture
+def authenticated_home_page(
+    home_page: AutomationExerciseHomePage,
+    login_page: AutomationExerciseLoginPage,
+    valid_user_credentials: UserCredentials,
+) -> AutomationExerciseHomePage:
+    home_page.navigate_to()
+    home_page.click_signup_login()
+    login_page.login_user(valid_user_credentials.email, valid_user_credentials.password)
+    return home_page
+
+
+@pytest.fixture
+def checkout_ready_cart(
+    home_page: AutomationExerciseHomePage,
+    products_page: AutomationExerciseProductsPage,
+    cart_page: AutomationExerciseCartPage,
+) -> AutomationExerciseCartPage:
+    home_page.navigate_to()
+    home_page.click_products()
+    products_page.hover_and_add_to_cart(0)
+    products_page.click_view_cart()
+    return cart_page
