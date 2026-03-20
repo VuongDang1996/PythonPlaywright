@@ -1,0 +1,20 @@
+{
+  "description": "Scenario 08: Edge channel auth batch with controlled workers",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc01_register_user.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc02_login_user_correct.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc03_login_user_incorrect.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc04_logout_user.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc05_register_existing_email.py"
+  ],
+  "browsers": [
+    "chromium"
+  ],
+  "browser_channel": "msedge",
+  "workers": "3",
+  "headed": false,
+  "quiet": true,
+  "maxfail": 2,
+  "allure_dir": "allure-results/scenario-08",
+  "junit_xml": "test-results/junit-scenario-08.xml"
+}

@@ -1,0 +1,21 @@
+{
+  "description": "Scenario 06: Product discovery and search across Chromium and Firefox",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc08_verify_products_and_detail.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc09_search_product.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc18_view_category_products.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc19_view_brand_products.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc20_search_products_verify_cart_after_login.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc21_add_review_product.py"
+  ],
+  "keyword": "product or category or brand or review",
+  "browsers": [
+    "chromium",
+    "firefox"
+  ],
+  "workers": "auto",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results/scenario-06",
+  "junit_xml": "test-results/junit-scenario-06.xml"
+}

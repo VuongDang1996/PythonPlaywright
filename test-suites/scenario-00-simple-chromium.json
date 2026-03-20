@@ -1,0 +1,15 @@
+{
+  "description": "Scenario 00: Simple sanity run (single test on Chromium)",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc07_verify_test_cases_page.py"
+  ],
+  "browsers": [
+    "chromium"
+  ],
+  "workers": "1",
+  "headed": false,
+  "quiet": true,
+  "maxfail": 1,
+  "allure_dir": "allure-results/scenario-00",
+  "junit_xml": "test-results/junit-scenario-00.xml"
+}

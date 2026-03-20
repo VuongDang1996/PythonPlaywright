@@ -1,0 +1,18 @@
+{
+  "description": "Scenario 07: Full Chromium run excluding slow and quarantine",
+  "paths": [
+    "pytests/specs"
+  ],
+  "exclude_paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc24_download_invoice_after_purchase.py"
+  ],
+  "markers": "not slow and not quarantine",
+  "browsers": [
+    "chromium"
+  ],
+  "workers": "auto",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results/scenario-07",
+  "junit_xml": "test-results/junit-scenario-07.xml"
+}

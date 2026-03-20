@@ -1,0 +1,16 @@
+{
+  "description": "Scenario 09: UI scroll tests in headed Chromium mode",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc25_verify_scroll_up_arrow_button.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc26_verify_scroll_up_without_arrow_button.py"
+  ],
+  "browsers": [
+    "chromium"
+  ],
+  "workers": "1",
+  "headed": true,
+  "quiet": true,
+  "maxfail": 1,
+  "allure_dir": "allure-results/scenario-09",
+  "junit_xml": "test-results/junit-scenario-09.xml"
+}

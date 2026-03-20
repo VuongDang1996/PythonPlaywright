@@ -1,0 +1,19 @@
+{
+  "description": "Scenario 04: Authentication-focused tests on Firefox",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc01_register_user.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc02_login_user_correct.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc03_login_user_incorrect.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc04_logout_user.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc05_register_existing_email.py"
+  ],
+  "keyword": "register or login or logout",
+  "browsers": [
+    "firefox"
+  ],
+  "workers": "2",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results/scenario-04",
+  "junit_xml": "test-results/junit-scenario-04.xml"
+}

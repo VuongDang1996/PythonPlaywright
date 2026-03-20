@@ -43,7 +43,7 @@ class FrameworkSettings:
 def load_framework_settings() -> FrameworkSettings:
     return FrameworkSettings(
         base_url=os.getenv("BASE_URL", "https://automationexercise.com").strip(),
-        headless=_read_bool("HEADLESS", True),
+        headless=_read_bool("HEADLESS", False),
         slow_mo_ms=_read_int("SLOW_MO_MS", 0),
         default_timeout_ms=_read_int("DEFAULT_TIMEOUT_MS", 30_000),
         navigation_timeout_ms=_read_int("NAVIGATION_TIMEOUT_MS", 60_000),
@@ -56,5 +56,5 @@ def load_framework_settings() -> FrameworkSettings:
         accept_downloads=_read_bool("ACCEPT_DOWNLOADS", True),
         trace_on_failure=_read_bool("TRACE_ON_FAILURE", True),
         screenshot_on_failure=_read_bool("SCREENSHOT_ON_FAILURE", True),
-        video_on_failure=_read_bool("VIDEO_ON_FAILURE", False),
+        video_on_failure=_read_bool("VIDEO_ON_FAILURE", True),
     )

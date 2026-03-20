@@ -1,0 +1,17 @@
+{
+  "description": "Scenario 02: Smoke tests across Chromium, Firefox, and WebKit",
+  "paths": [
+    "pytests/specs"
+  ],
+  "markers": "smoke and not quarantine",
+  "browsers": [
+    "chromium",
+    "firefox",
+    "webkit"
+  ],
+  "workers": "auto",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results/scenario-02",
+  "junit_xml": "test-results/junit-scenario-02.xml"
+}

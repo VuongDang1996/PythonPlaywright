@@ -73,11 +73,14 @@ def base_url(framework_settings: FrameworkSettings) -> str:
 
 @pytest.fixture(scope="session")
 def browser_type_launch_args(
-    browser_type_launch_args: Dict[str, Any], framework_settings: FrameworkSettings
+    browser_type_launch_args: Dict[str, Any],
+    framework_settings: FrameworkSettings,
+    pytestconfig,
 ) -> Dict[str, Any]:
+    headed_requested = bool(pytestconfig.getoption("headed"))
     return {
         **browser_type_launch_args,
-        "headless": framework_settings.headless,
+        "headless": False if headed_requested else framework_settings.headless,
         "slow_mo": framework_settings.slow_mo_ms,
     }
 

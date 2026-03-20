@@ -1,0 +1,17 @@
+{
+  "description": "Run smoke suite across Chromium, Firefox, and WebKit in parallel",
+  "paths": [
+    "pytests/specs"
+  ],
+  "markers": "smoke and not quarantine",
+  "browsers": [
+    "chromium",
+    "firefox",
+    "webkit"
+  ],
+  "workers": "auto",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results",
+  "junit_xml": "test-results/junit-cross-browser.xml"
+}

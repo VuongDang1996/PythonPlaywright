@@ -133,6 +133,76 @@ Collect tests only:
 python -m pytest --collect-only pytests/specs -q
 ```
 
+Run from a suite file (similar to Selenium TestNG XML):
+
+```bash
+python scripts/run_test_suite.py --suite test-suites/cross-browser.json
+```
+
+Run TC01 on Edge using suite file:
+
+```bash
+python scripts/run_test_suite.py --suite test-suites/tc01-edge.json
+```
+
+## Suite File Guideline (Like Selenium TestNG XML)
+
+Use JSON files in `test-suites/` to control what runs, what is skipped, which browsers are used, and how parallel execution is configured.
+
+### 1. Create or choose a suite file
+
+- Existing examples:
+  - `test-suites/scenario-00-simple-firefox.json`
+  - `test-suites/scenario-02-smoke-cross-browser.json`
+  - `test-suites/scenario-08-edge-auth-batch.json`
+
+### 2. Run by suite file
+
+```bash
+python scripts/run_test_suite.py --suite test-suites/scenario-00-simple-firefox.json
+```
+
+### 3. Suite file fields
+
+- `description`: Human-readable suite name.
+- `paths`: Test files/folders to include.
+- `exclude_paths`: Paths to skip using `--ignore`.
+- `markers`: Marker filter expression, for example `smoke and not quarantine`.
+- `keyword`: `-k` expression for test name filtering.
+- `browsers`: Browser list, for example `chromium`, `firefox`, `webkit`.
+- `browser_channel`: Optional channel for Chromium, for example `msedge` or `chrome`.
+- `workers`: Worker count for xdist (`1`, `2`, `4`, `auto`).
+- `headed`: `true` to show browser UI, `false` for headless.
+- `quiet`: `true` to run with `-q`.
+- `maxfail`: Stop early after N failures.
+- `allure_dir`: Allure raw output folder.
+- `junit_xml`: JUnit XML output path.
+- `extra_args`: Any additional pytest args.
+
+### 4. Minimal suite example
+
+```json
+{
+  "description": "Simple one-test run on Firefox",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc01_register_user.py"
+  ],
+  "browsers": [
+    "firefox"
+  ],
+  "workers": "1",
+  "quiet": true,
+  "junit_xml": "test-results/junit-simple.xml"
+}
+```
+
+### 5. Typical use cases
+
+- Smoke validation across browsers.
+- Edge-only batch for auth flows.
+- Fast local debugging with one file and `headed=true`.
+- Nightly regression using markers + workers + retries in `extra_args`.
+
 Notes:
 - pytest.ini already enables parallel execution by default with -n auto and --dist=loadscope.
 - To limit concurrency, pass a fixed worker count such as -n 4.
@@ -211,6 +281,8 @@ npm test
 npm run py:test
 npm run py:test:smoke
 npm run py:test:parallel
+npm run py:test:suite
+npm run py:test:suite:tc01:edge
 npm run py:test:allure
 ```
 

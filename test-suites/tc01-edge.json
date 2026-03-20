@@ -1,0 +1,15 @@
+{
+  "description": "Run TC01 on Edge channel only",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc01_register_user.py"
+  ],
+  "browsers": [
+    "chromium"
+  ],
+  "browser_channel": "msedge",
+  "workers": "3",
+  "headed": false,
+  "quiet": true,
+  "allure_dir": "allure-results",
+  "junit_xml": "test-results/junit-tc01-edge.xml"
+}

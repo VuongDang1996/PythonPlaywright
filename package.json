@@ -13,6 +13,8 @@
     "py:test:chromium": "python -m pytest pytests/specs --browser chromium -q",
     "py:test:firefox": "python -m pytest pytests/specs --browser firefox -q",
     "py:test:webkit": "python -m pytest pytests/specs --browser webkit -q",
+    "py:test:suite": "python scripts/run_test_suite.py --suite test-suites/cross-browser.json",
+    "py:test:suite:tc01:edge": "python scripts/run_test_suite.py --suite test-suites/tc01-edge.json",
     "py:test:allure": "python -m pytest pytests/specs --browser chromium --alluredir=allure-results -q",
     "py:report:generate": "allure generate allure-results --clean -o allure-report",
     "py:report:open": "allure open allure-report",

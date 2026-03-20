@@ -1,0 +1,20 @@
+{
+  "description": "Scenario 03: Chromium regression run with retries and maxfail",
+  "paths": [
+    "pytests/specs"
+  ],
+  "markers": "regression and not quarantine",
+  "browsers": [
+    "chromium"
+  ],
+  "workers": "4",
+  "headed": false,
+  "quiet": true,
+  "maxfail": 2,
+  "allure_dir": "allure-results/scenario-03",
+  "junit_xml": "test-results/junit-scenario-03.xml",
+  "extra_args": [
+    "--reruns=1",
+    "--reruns-delay=1"
+  ]
+}

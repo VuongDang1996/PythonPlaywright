@@ -1,0 +1,16 @@
+{
+  "description": "Scenario 01: Run TC01 on Edge in headed mode with fast fail",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc01_register_user.py"
+  ],
+  "browsers": [
+    "chromium"
+  ],
+  "browser_channel": "msedge",
+  "workers": "1",
+  "headed": true,
+  "quiet": true,
+  "maxfail": 1,
+  "allure_dir": "allure-results/scenario-01",
+  "junit_xml": "test-results/junit-scenario-01.xml"
+}

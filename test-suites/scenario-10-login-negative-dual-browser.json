@@ -1,0 +1,18 @@
+{
+  "description": "Scenario 10: Negative login scenarios on Chromium and Firefox",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc03_login_user_incorrect.py",
+    "pytests/specs/automation_exercise/individual_tests/test_parametrized_invalid_login.py"
+  ],
+  "keyword": "invalid or incorrect or login",
+  "browsers": [
+    "chromium",
+    "firefox"
+  ],
+  "workers": "2",
+  "headed": false,
+  "quiet": true,
+  "maxfail": 2,
+  "allure_dir": "allure-results/scenario-10",
+  "junit_xml": "test-results/junit-scenario-10.xml"
+}

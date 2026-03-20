@@ -1,0 +1,22 @@
+{
+  "description": "Scenario 05: Cart and checkout flow on WebKit",
+  "paths": [
+    "pytests/specs/automation_exercise/individual_tests/test_tc12_add_products_cart.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc13_verify_product_quantity_cart.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc14_place_order_register_while_checkout.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc15_place_order_register_before_checkout.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc16_place_order_login_before_checkout.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc17_remove_products_cart.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc23_verify_address_details_checkout.py",
+    "pytests/specs/automation_exercise/individual_tests/test_tc24_download_invoice_after_purchase.py"
+  ],
+  "browsers": [
+    "webkit"
+  ],
+  "workers": "2",
+  "headed": false,
+  "quiet": true,
+  "maxfail": 3,
+  "allure_dir": "allure-results/scenario-05",
+  "junit_xml": "test-results/junit-scenario-05.xml"
+}
