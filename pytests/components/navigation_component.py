@@ -13,7 +13,7 @@ class NavigationComponent(BaseComponent):
         self.cart_link = page.locator('a[href="/view_cart"]').first
         self.logout_link = page.locator('a[href="/logout"]')
         self.delete_account_link = page.locator('a[href="/delete_account"]')
-        self.logged_in_as_user = page.locator('li:has-text("Logged in as")')
+        self.logged_in_as_user = page.locator('li:has-text("Logged in as"), a[href="/logout"]').first
 
     def click_signup_login(self) -> None:
         self.signup_login_link.click()

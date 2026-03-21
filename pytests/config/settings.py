@@ -26,6 +26,10 @@ class FrameworkSettings:
     headless: bool
     slow_mo_ms: int
     default_timeout_ms: int
+    element_timeout_ms: int
+    hidden_timeout_ms: int
+    retry_wait_ms: int
+    retry_navigation_timeout_ms: int
     navigation_timeout_ms: int
     viewport_width: int
     viewport_height: int
@@ -46,6 +50,10 @@ def load_framework_settings() -> FrameworkSettings:
         headless=_read_bool("HEADLESS", False),
         slow_mo_ms=_read_int("SLOW_MO_MS", 0),
         default_timeout_ms=_read_int("DEFAULT_TIMEOUT_MS", 30_000),
+        element_timeout_ms=_read_int("ELEMENT_TIMEOUT_MS", 10_000),
+        hidden_timeout_ms=_read_int("HIDDEN_TIMEOUT_MS", 10_000),
+        retry_wait_ms=_read_int("RETRY_WAIT_MS", 2_000),
+        retry_navigation_timeout_ms=_read_int("RETRY_NAVIGATION_TIMEOUT_MS", 45_000),
         navigation_timeout_ms=_read_int("NAVIGATION_TIMEOUT_MS", 60_000),
         viewport_width=_read_int("VIEWPORT_WIDTH", 1280),
         viewport_height=_read_int("VIEWPORT_HEIGHT", 720),

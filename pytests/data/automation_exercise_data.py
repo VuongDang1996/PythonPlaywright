@@ -1,6 +1,11 @@
-import os
 from dataclasses import dataclass
 from typing import Dict
+
+from pytests.data.credentials import (
+    get_existing_user_credentials,
+    get_invalid_user_credentials,
+    get_valid_user_credentials,
+)
 
 
 @dataclass(frozen=True)
@@ -46,10 +51,6 @@ def build_sample_registration_data() -> Dict[str, str]:
     }
 
 
-def _env(name: str, default: str) -> str:
-    return os.getenv(name, default)
-
-
 AUTOMATION_EXERCISE_TEST_DATA = {
     "epic": "Automation Exercise E2E Testing",
     "features": {
@@ -78,18 +79,22 @@ AUTOMATION_EXERCISE_TEST_DATA = {
 }
 
 
+_valid_user = get_valid_user_credentials()
+_invalid_user = get_invalid_user_credentials()
+_existing_user = get_existing_user_credentials()
+
 TEST_USERS = {
     "valid_user": {
-        "email": _env("AE_VALID_USER_EMAIL", "vanvuongbtm@gmail.com"),
-        "password": _env("AE_VALID_USER_PASSWORD", "vanvuongbtm@gmail.com"),
+        "email": _valid_user.email,
+        "password": _valid_user.password,
     },
     "invalid_user": {
-        "email": _env("AE_INVALID_USER_EMAIL", "invalid@example.com"),
-        "password": _env("AE_INVALID_USER_PASSWORD", "wrongpassword"),
+        "email": _invalid_user.email,
+        "password": _invalid_user.password,
     },
     "existing_user": {
-        "email": _env("AE_EXISTING_USER_EMAIL", "existing@example.com"),
-        "password": _env("AE_EXISTING_USER_PASSWORD", "password123"),
+        "email": _existing_user.email,
+        "password": _existing_user.password,
     },
 }
 

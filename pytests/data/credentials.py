@@ -1,5 +1,6 @@
-import os
 from dataclasses import dataclass
+
+from pytests.data.secret_provider import get_secret_provider
 
 
 @dataclass(frozen=True)
@@ -7,11 +8,23 @@ class UserCredentials:
     email: str
     password: str
 
+    def masked_email(self) -> str:
+        if "@" not in self.email:
+            return "***"
+        local, domain = self.email.split("@", 1)
+        if len(local) <= 2:
+            return f"***@{domain}"
+        return f"{local[:2]}***@{domain}"
+
+    def masked(self) -> "UserCredentials":
+        return UserCredentials(email=self.masked_email(), password="***")
+
 
 def _from_env(prefix: str, default_email: str, default_password: str) -> UserCredentials:
+    provider = get_secret_provider()
     return UserCredentials(
-        email=os.getenv(f"{prefix}_EMAIL", default_email),
-        password=os.getenv(f"{prefix}_PASSWORD", default_password),
+        email=provider.get(f"{prefix}_EMAIL", default_email),
+        password=provider.get(f"{prefix}_PASSWORD", default_password),
     )
 
 

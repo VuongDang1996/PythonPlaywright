@@ -1,20 +1,30 @@
 from playwright.sync_api import Page
 
+from pytests.config.selectors import CART_PAGE_SELECTORS
 from pytests.pages.base_page import BasePage
 
 
 class AutomationExerciseCartPage(BasePage):
     def __init__(self, page: Page) -> None:
         super().__init__(page)
-        self.cart_table = page.locator("#cart_info_table")
-        self.cart_items = page.locator("tbody tr")
-        self.product_names = page.locator(".cart_description h4 a")
-        self.product_prices = page.locator(".cart_price p")
-        self.product_quantities = page.locator(".cart_quantity button")
-        self.product_totals = page.locator(".cart_total_price")
-        self.remove_buttons = page.locator(".cart_quantity_delete")
-        self.proceed_to_checkout_button = page.locator('a:has-text("Proceed To Checkout")')
-        self.register_login_button = page.locator('u:has-text("Register / Login")')
+        self.cart_table = page.locator(CART_PAGE_SELECTORS.cart_table)
+        self.cart_items = page.locator(CART_PAGE_SELECTORS.cart_items)
+        self.product_names = page.locator(CART_PAGE_SELECTORS.product_names)
+        self.product_prices = page.locator(CART_PAGE_SELECTORS.product_prices)
+        self.product_quantities = page.locator(CART_PAGE_SELECTORS.product_quantities)
+        self.product_totals = page.locator(CART_PAGE_SELECTORS.product_totals)
+        self.remove_buttons = page.locator(CART_PAGE_SELECTORS.remove_buttons)
+        self.proceed_to_checkout_button = page.get_by_role(
+            CART_PAGE_SELECTORS.proceed_to_checkout_button_role[0],
+            name=CART_PAGE_SELECTORS.proceed_to_checkout_button_role[1],
+        )
+        self.proceed_to_checkout_button_fallback = page.locator(
+            'a:has-text("Proceed To Checkout")'
+        ).first
+        self.register_login_button = page.get_by_role(
+            CART_PAGE_SELECTORS.register_login_button_role[0],
+            name=CART_PAGE_SELECTORS.register_login_button_role[1],
+        )
 
     def get_cart_items_count(self) -> int:
         return self.cart_items.count()
@@ -29,7 +39,16 @@ class AutomationExerciseCartPage(BasePage):
         return self.get_text_values(self.product_totals)
 
     def click_proceed_to_checkout(self) -> None:
-        self.proceed_to_checkout_button.click()
+        try:
+            self.proceed_to_checkout_button.click(timeout=self.settings.element_timeout_ms)
+            return
+        except Exception:
+            pass
+
+        self.proceed_to_checkout_button_fallback.scroll_into_view_if_needed()
+        self.proceed_to_checkout_button_fallback.click(
+            timeout=self.settings.element_timeout_ms, force=True
+        )
 
     def click_register_login(self) -> None:
         self.register_login_button.click()

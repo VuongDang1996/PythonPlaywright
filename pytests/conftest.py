@@ -2,7 +2,7 @@ import os
 import re
 import hashlib
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Generator
 
 import pytest
 from dotenv import load_dotenv
@@ -16,6 +16,9 @@ from pytests.data.credentials import (
     get_valid_user_credentials,
 )
 from pytests.data.factories import build_registration_data
+from pytests.data.user_pool import FileUserPoolManager
+from pytests.flows.auth_flow import AuthFlow
+from pytests.flows.cart_flow import CartFlow
 from pytests.pages.automation_exercise_cart_page import AutomationExerciseCartPage
 from pytests.pages.automation_exercise_contact_us_page import AutomationExerciseContactUsPage
 from pytests.pages.automation_exercise_home_page import AutomationExerciseHomePage
@@ -280,30 +283,66 @@ def registration_data() -> Dict[str, str]:
     return build_registration_data()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def valid_user_credentials() -> UserCredentials:
     return get_valid_user_credentials()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def invalid_user_credentials() -> UserCredentials:
     return get_invalid_user_credentials()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def existing_user_credentials() -> UserCredentials:
     return get_existing_user_credentials()
 
 
+@pytest.fixture(scope="session")
+def user_pool_manager(valid_user_credentials: UserCredentials) -> FileUserPoolManager:
+    extra_users_raw = os.getenv("AE_USER_POOL_USERS", "").strip()
+    extra_users: list[UserCredentials] = []
+
+    if extra_users_raw:
+        for pair in extra_users_raw.split(";"):
+            parts = pair.strip().split(":", 1)
+            if len(parts) == 2 and parts[0] and parts[1]:
+                extra_users.append(UserCredentials(email=parts[0].strip(), password=parts[1].strip()))
+
+    seed_users = [valid_user_credentials, *extra_users]
+    pool_file = os.getenv("AE_USER_POOL_FILE", "test-results/state/user_pool.json")
+    return FileUserPoolManager(pool_file=pool_file, seed_users=seed_users)
+
+
+@pytest.fixture
+def leased_valid_user_credentials(
+    user_pool_manager: FileUserPoolManager, valid_user_credentials: UserCredentials
+) -> Generator[UserCredentials, None, None]:
+    leased_user = user_pool_manager.acquire(fallback=valid_user_credentials)
+    try:
+        yield leased_user
+    finally:
+        user_pool_manager.release(leased_user)
+
+
+@pytest.fixture
+def auth_flow() -> AuthFlow:
+    return AuthFlow()
+
+
+@pytest.fixture
+def cart_flow() -> CartFlow:
+    return CartFlow()
+
+
 @pytest.fixture
 def authenticated_home_page(
+    auth_flow: AuthFlow,
     home_page: AutomationExerciseHomePage,
     login_page: AutomationExerciseLoginPage,
-    valid_user_credentials: UserCredentials,
+    leased_valid_user_credentials: UserCredentials,
 ) -> AutomationExerciseHomePage:
-    home_page.navigate_to()
-    home_page.click_signup_login()
-    login_page.login_user(valid_user_credentials.email, valid_user_credentials.password)
+    auth_flow.login_from_home(home_page, login_page, leased_valid_user_credentials)
     return home_page
 
 
