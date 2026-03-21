@@ -1,216 +1,197 @@
-# Cucumber BDD Integration Guide
+# Behave BDD Guide (Python Framework)
 
-This guide covers the Cucumber BDD (Behavior Driven Development) framework integration with your Playwright automation project.
+This project uses Python Behave for BDD, not TypeScript Cucumber.js.
 
-## 🚀 Quick Start
+## Why This Changed
 
-### Running Cucumber Tests
+An older guide version was left from a previous TypeScript/Cucumber setup. The active framework in this repository is Python Playwright + Pytest + Behave.
+
+## Quick Start
+
+Run all BDD features:
 
 ```bash
-# Run all cucumber tests
-npm run cucumber
-
-# Run tests with specific tags
-npm run cucumber:smoke          # Run smoke tests only
-npm run cucumber:products       # Run product-related tests
-npm run cucumber:authentication # Run authentication tests
-npm run cucumber:user-registration # Run user registration tests
-
-# Generate HTML report after test execution
-npm run cucumber:report
+python -m behave features
 ```
 
-## 📁 Project Structure
+Run smoke BDD only:
 
+```bash
+python -m behave features --tags @smoke
 ```
+
+Validate step mapping only (no browser execution):
+
+```bash
+python -m behave features --dry-run
+```
+
+Run a single feature file:
+
+```bash
+python -m behave features/user-authentication.feature
+```
+
+Run by feature line number:
+
+```bash
+python -m behave features/user-authentication.feature:20
+```
+
+Generate JUnit output for reporting:
+
+```bash
+python -m behave features --junit --junit-directory test-results/behave-junit
+```
+
+## BDD Project Structure
+
+```text
 features/
-├── support/
-│   └── world.ts                    # World context with page objects
-├── step-definitions/
-│   ├── user-registration.steps.ts # User registration step definitions
-│   ├── user-authentication.steps.ts # Authentication step definitions
-│   └── product-management.steps.ts # Product management step definitions
-├── user-registration.feature       # User registration scenarios
-├── user-authentication.feature     # Authentication scenarios
-└── product-management.feature      # Product management scenarios
+|-- environment.py
+|-- user-registration.feature
+|-- user-authentication.feature
+|-- product-management.feature
+`-- steps/
+    |-- user_registration_steps.py
+    |-- user_authentication_steps.py
+    `-- product_management_steps.py
+
+behave.ini
 ```
 
-## 🎯 Feature Coverage
+## Current Feature Coverage
 
-### User Registration (TC01)
-- Register new user with valid details
-- Fill account and address information
-- Verify account creation and deletion
+User Registration (TC01):
+- Register user
+- Fill account and address details
+- Verify account created and deleted
 
-### User Authentication (TC02-TC04)
-- Login with correct credentials
-- Login with incorrect credentials (negative test)
-- Logout functionality
+User Authentication (TC02-TC04):
+- Login with valid credentials
+- Login with invalid credentials (negative)
+- Logout flow
 
-### Product Management (TC07-TC12)
-- Verify test cases page
-- View all products and product details
+Product Management (TC07-TC12):
+- Navigate to test cases page
+- View products and product detail
 - Search products
 - Add products to cart
 
-## 🏷️ Tags Available
+## Tags in Use
 
-- `@smoke` - Critical smoke tests
-- `@user-registration` - User registration tests
-- `@authentication` - Authentication tests
-- `@products` - Product management tests
-- `@search` - Search functionality tests
-- `@cart` - Shopping cart tests
-- `@negative` - Negative test scenarios
+- @smoke
+- @user-registration
+- @authentication
+- @products
+- @search
+- @cart
+- @negative
 
-## 📄 Feature Files
+## Behave Configuration
 
-### Example Feature File Structure
+Configuration is in behave.ini and uses the features path and progress formatter.
+
+Example:
+
+```ini
+[behave]
+paths = features
+stdout_capture = false
+stderr_capture = false
+log_capture = false
+format = progress2
+```
+
+## Example Feature and Step
+
+Feature snippet:
 
 ```gherkin
 Feature: User Registration
-  As a potential user
-  I want to register for an account
-  So that I can access the website's features
-
   @smoke @user-registration
   Scenario: TC01 - Register User with valid details
     Given I navigate to the home page
     When I verify that home page is visible successfully
     And I click on 'Signup / Login' button
-    Then I should see 'New User Signup!' is visible
-    # ... more steps
 ```
 
-## 🔧 Configuration
+Step definition snippet (Python):
 
-### Cucumber Configuration (`cucumber.js`)
-```javascript
-const common = [
-  'features/**/*.feature',                // Feature files location
-  '--require-module ts-node/register',    // TypeScript support
-  '--require features/**/*.ts',           // Step definitions
-  '--format progress-bar',                // Progress display
-  '--format json:reports/cucumber-report.json', // JSON report
-  '--format html:reports/cucumber-report.html', // HTML report
-  '--format @cucumber/pretty-formatter',   // Console output
-  '--publish-quiet'
-].join(' ');
+```python
+from behave import given
+
+
+@given("I navigate to the home page")
+def step_navigate_home(context):
+    context.home_page.navigate_to()
 ```
 
-### World Context (`features/support/world.ts`)
-The World context provides:
-- Browser and page management
-- Page object initialization
-- Test setup and teardown
-- Shared state between steps
+## Reporting
 
-## 📊 Reporting
+Generate Behave JUnit output:
 
-### Available Reports
-1. **JSON Report**: `reports/cucumber-report.json`
-2. **HTML Report**: `reports/cucumber-report.html`
-3. **Console Output**: Real-time progress and results
-
-### Report Features
-- Test execution summary
-- Step-by-step results
-- Screenshots on failure (if configured)
-- Execution metadata (browser, platform, etc.)
-
-## 🐛 Debugging
-
-### Running Single Feature
 ```bash
-npx cucumber-js features/user-registration.feature
+python -m behave features --junit --junit-directory test-results/behave-junit
 ```
 
-### Running Single Scenario
+Create summary from Behave JUnit files:
+
 ```bash
-npx cucumber-js features/user-registration.feature:10  # Line number 10
+python scripts/summarize_junit.py \
+  --input test-results/behave-junit \
+  --output-json test-results/behave-summary.json \
+  --output-md test-results/behave-summary.md \
+  --title "Behave BDD Summary"
 ```
 
-### Debug Mode
-Add `@only` tag to scenario for focused execution:
-```gherkin
-@only @smoke
-Scenario: Debug this scenario
+## CI Integration
+
+BDD runs in GitHub Actions workflow .github/workflows/python-pytest.yml using job test-behave.
+
+Tag behavior:
+- Pull requests: @smoke
+- Push/main runs: full BDD suite by default
+- Manual dispatch with test_scope=smoke: @smoke
+
+BDD artifact name pattern:
+- behave-bdd-results-<run_number>
+
+Artifacts include:
+- test-results/behave-output.txt
+- test-results/behave-junit/*
+- test-results/behave-summary.json
+- test-results/behave-summary.md
+
+## Debugging Tips
+
+Run only one tag group:
+
+```bash
+python -m behave features --tags @authentication
 ```
 
-## 🔄 Converting Existing Tests
+Stop early on first failure:
 
-To convert existing Playwright specs to Cucumber:
-
-1. **Identify Test Steps**: Break down spec into Given/When/Then steps
-2. **Create Feature File**: Write user story and scenarios
-3. **Create Step Definitions**: Implement step functions
-4. **Add Tags**: Categorize scenarios with appropriate tags
-
-### Example Conversion
-
-**Original Playwright Test:**
-```typescript
-test('Register User', async ({ homePage, loginPage }) => {
-  await homePage.navigateTo();
-  await homePage.clickSignupLogin();
-  // ... more steps
-});
+```bash
+python -m behave features --stop
 ```
 
-**Cucumber Feature:**
-```gherkin
-Scenario: Register User
-  Given I navigate to the home page
-  When I click on 'Signup / Login' button
-  # ... more steps
+Use dry-run to find undefined steps quickly:
+
+```bash
+python -m behave features --dry-run
 ```
 
-**Step Definition:**
-```typescript
-Given('I navigate to the home page', async function (this: CustomWorld) {
-  await this.automationExerciseHomePage.navigateTo();
-});
-```
+## Best Practices
 
-## 📝 Best Practices
+1. Keep step definitions reusable and business-readable.
+2. Keep selectors and UI actions in page objects, not in feature files.
+3. Use tags to control fast PR smoke runs versus full regression.
+4. Prefer stable test data and fallback flows for shared environments.
+5. Keep feature files focused on behavior, not implementation details.
 
-1. **Use Descriptive Scenario Names**: Make them business-readable
-2. **Keep Steps Reusable**: Write generic steps that can be reused
-3. **Use Proper Tags**: Organize tests with meaningful tags
-4. **Background Steps**: Use `Background:` for common setup steps
-5. **Data Tables**: Use tables for complex test data
-6. **Scenario Outlines**: Use for data-driven testing
+## References
 
-### Example Data Table
-```gherkin
-When I fill in address information
-  | firstName | lastName | company  | address1    | country |
-  | Test      | User     | TestCorp | 123 Main St | India   |
-```
-
-### Example Scenario Outline
-```gherkin
-Scenario Outline: Login with different credentials
-  When I login with email "<email>" and password "<password>"
-  Then I should see "<result>"
-  
-  Examples:
-    | email           | password    | result     |
-    | valid@test.com  | password123 | success    |
-    | invalid@test.com| wrongpass   | error      |
-```
-
-## 🚀 Next Steps
-
-1. **Add More Features**: Convert remaining test cases (TC13-TC26)
-2. **Enhance Reporting**: Add screenshots and videos to reports
-3. **CI/CD Integration**: Configure pipeline execution
-4. **Cross-Browser Support**: Extend for multiple browsers
-5. **API Testing**: Add API step definitions for hybrid testing
-
-## 📚 Resources
-
-- [Cucumber.js Documentation](https://cucumber.io/docs/cucumber/)
-- [Playwright Documentation](https://playwright.dev/)
-- [BDD Best Practices](https://cucumber.io/docs/bdd/)
-- [Gherkin Syntax Reference](https://cucumber.io/docs/gherkin/)
+- Behave docs: https://behave.readthedocs.io/
+- Gherkin reference: https://cucumber.io/docs/gherkin/
