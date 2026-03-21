@@ -1,0 +1,18 @@
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,700. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Abel. This content was blocked and must be served over HTTPS.
+
+[info] Successfully preconnected to https://googleads.g.doubleclick.net/
+[log] no video
+[warning] [blocked] The page at https://automationexercise.com/contact_us requested insecure content from http://fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/contact_us requested insecure content from http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,700. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/contact_us requested insecure content from http://fonts.googleapis.com/css?family=Abel. This content was blocked and must be served over HTTPS.
+
+[warning] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading
+[info] Successfully preconnected to https://googleads.g.doubleclick.net/
+[warning] Google Maps JavaScript API warning: NoApiKeys https://developers.google.com/maps/documentation/javascript/error-messages#no-api-keys
+[warning] Google Maps JavaScript API warning: SensorNotRequired https://developers.google.com/maps/documentation/javascript/error-messages#sensor-not-required

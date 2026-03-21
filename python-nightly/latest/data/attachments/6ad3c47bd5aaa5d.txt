@@ -1,0 +1,21 @@
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,700. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/ requested insecure content from http://fonts.googleapis.com/css?family=Abel. This content was blocked and must be served over HTTPS.
+
+[info] Successfully preconnected to https://googleads.g.doubleclick.net/
+[log] no video
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,700. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Abel. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Roboto:400,300,400italic,500,700,100. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,700. This content was blocked and must be served over HTTPS.
+
+[warning] [blocked] The page at https://automationexercise.com/login requested insecure content from http://fonts.googleapis.com/css?family=Abel. This content was blocked and must be served over HTTPS.
+
+[error] Error: Invalid value for <svg> attribute width="auto"
