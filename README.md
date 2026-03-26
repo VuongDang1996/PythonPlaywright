@@ -286,10 +286,51 @@ Primary Python workflows:
 - .github/workflows/manual.yml
   - manual Python pytest dispatch
   - browser choice: chromium/firefox/webkit/all
+  - optional upload to self-hosted Allure TestOps when secrets are configured
 
 Legacy workflow:
 
 - .github/workflows/individual-tests.yml remains for the older TypeScript path and is not the primary Python pipeline.
+
+## Optional: Self-Hosted Allure TestOps Integration
+
+The CI workflows now support optional upload of raw Allure results to a self-hosted Allure TestOps instance.
+
+Required GitHub repository secrets:
+
+- ALLURE_TESTOPS_ENDPOINT
+- ALLURE_TESTOPS_TOKEN
+- ALLURE_TESTOPS_PROJECT_ID
+
+Optional rollout toggle secret:
+
+- ALLURE_TESTOPS_ENABLED (`true` by default when unset, set to `false` to disable uploads without editing workflows)
+
+Optional CI quality gate secrets (used in primary and nightly Python workflows):
+
+- QUALITY_GATE_ENABLED (`false` by default)
+- QUALITY_GATE_MIN_PASS_RATE (`95` by default)
+- QUALITY_GATE_MAX_FAILED_TOTAL (`0` by default)
+- QUALITY_GATE_MAX_FLAKY (`5` by default)
+
+Quality gate outputs:
+
+- `test-results/quality-gate.md` is generated in the primary workflow.
+- `test-results/<browser>/quality-gate.md` is generated in nightly matrix jobs.
+- Primary PR comments include the quality gate section when available.
+
+Behavior:
+
+- If all three secrets are set, workflows install `allurectl` and upload raw results.
+- If any secret is missing, uploads are skipped automatically.
+- Upload steps are non-blocking (`continue-on-error: true`) to avoid breaking existing CI.
+
+Current workflows with optional upload support:
+
+- .github/workflows/python-pytest.yml
+- .github/workflows/python-pytest-nightly.yml
+- .github/workflows/manual.yml
+- .github/workflows/individual-tests.yml
 
 ## NPM Convenience Scripts
 

@@ -2,6 +2,8 @@ name: Manual Python Playwright
 
 env:
   HEADLESS: 'true'
+  ENABLE_TESTOPS_UPLOAD: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] != '' }}
+  ALLURE_TESTOPS_ENABLED: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENABLED')] }}
 
 on:
   workflow_dispatch:
@@ -40,6 +42,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Install allurectl (optional)
+        if: ${{ env.ENABLE_TESTOPS_UPLOAD == 'true' }}
+        run: |
+          curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+          allurectl --version
+
       - name: Install Playwright Browser
         run: python -m playwright install --with-deps ${{ matrix.browser }}
 
@@ -63,6 +73,41 @@ jobs:
             -q
         env:
           CI: true
+
+      - name: Upload manual raw results to Allure TestOps (optional)
+        if: always()
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] }}
+          ALLURE_TOKEN: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] }}
+          ALLURE_PROJECT_ID: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] }}
+          ALLURE_LAUNCH_NAME: python-manual-${{ matrix.browser }}-${{ github.ref_name }}-${{ github.run_number }}
+        run: |
+          ENABLED_VALUE="${ALLURE_TESTOPS_ENABLED:-true}"
+
+          if [ "${ENABLE_TESTOPS_UPLOAD}" != "true" ] || [ "${ENABLED_VALUE}" = "false" ]; then
+            echo "Allure TestOps upload skipped (missing secrets)."
+            exit 0
+          fi
+
+          if [ ! -d "allure-results" ]; then
+            echo "Allure results folder not found, skipping upload."
+            exit 0
+          fi
+
+          printf "%s\n" \
+            "workflow=${{ github.workflow }}" \
+            "event=${{ github.event_name }}" \
+            "branch=${{ github.ref_name }}" \
+            "sha=${{ github.sha }}" \
+            "run_id=${{ github.run_id }}" \
+            "run_number=${{ github.run_number }}" \
+            "browser=${{ matrix.browser }}" \
+            "trigger=manual" \
+            "repository=${{ github.repository }}" \
+            > allure-results/environment.properties
+
+          allurectl upload allure-results
 
       - name: Generate manual test summary
         if: always()

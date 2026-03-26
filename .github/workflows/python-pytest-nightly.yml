@@ -22,6 +22,12 @@ env:
   PYTHON_VERSION: '3.12'
   BASE_URL: 'https://automationexercise.com'
   HEADLESS: 'true'
+  ENABLE_TESTOPS_UPLOAD: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] != '' }}
+  ALLURE_TESTOPS_ENABLED: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENABLED')] }}
+  QUALITY_GATE_ENABLED: ${{ secrets[format('QUALITY_GATE_{0}', 'ENABLED')] }}
+  QUALITY_GATE_MIN_PASS_RATE: ${{ secrets[format('QUALITY_GATE_{0}', 'MIN_PASS_RATE')] }}
+  QUALITY_GATE_MAX_FAILED_TOTAL: ${{ secrets[format('QUALITY_GATE_{0}', 'MAX_FAILED_TOTAL')] }}
+  QUALITY_GATE_MAX_FLAKY: ${{ secrets[format('QUALITY_GATE_{0}', 'MAX_FLAKY')] }}
 
 jobs:
   nightly-regression:
@@ -46,6 +52,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
+
+      - name: Install allurectl (optional)
+        if: ${{ env.ENABLE_TESTOPS_UPLOAD == 'true' }}
+        run: |
+          curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+          allurectl --version
 
       - name: Quality checks (ruff, black, mypy)
         run: |
@@ -106,6 +120,41 @@ jobs:
             -q
         env:
           CI: true
+
+      - name: Upload nightly raw results to Allure TestOps (optional)
+        if: always()
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] }}
+          ALLURE_TOKEN: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] }}
+          ALLURE_PROJECT_ID: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] }}
+          ALLURE_LAUNCH_NAME: python-nightly-${{ matrix.browser }}-${{ github.ref_name }}-${{ github.run_number }}
+        run: |
+          ENABLED_VALUE="${ALLURE_TESTOPS_ENABLED:-true}"
+
+          if [ "${ENABLE_TESTOPS_UPLOAD}" != "true" ] || [ "${ENABLED_VALUE}" = "false" ]; then
+            echo "Allure TestOps upload skipped (missing secrets)."
+            exit 0
+          fi
+
+          if [ ! -d "allure-results/${{ matrix.browser }}" ]; then
+            echo "Allure results folder not found for browser, skipping upload."
+            exit 0
+          fi
+
+          printf "%s\n" \
+            "workflow=${{ github.workflow }}" \
+            "event=${{ github.event_name }}" \
+            "branch=${{ github.ref_name }}" \
+            "sha=${{ github.sha }}" \
+            "run_id=${{ github.run_id }}" \
+            "run_number=${{ github.run_number }}" \
+            "browser=${{ matrix.browser }}" \
+            "schedule=nightly" \
+            "repository=${{ github.repository }}" \
+            > allure-results/${{ matrix.browser }}/environment.properties
+
+          allurectl upload allure-results/${{ matrix.browser }}
 
       - name: Generate nightly test summary
         if: always()
@@ -182,6 +231,18 @@ jobs:
           path: .ci-trends/${{ matrix.browser }}
           key: flaky-trend-${{ github.ref_name }}-${{ matrix.browser }}-${{ github.run_id }}
 
+      - name: Enforce optional nightly quality gate
+        if: always()
+        run: |
+          python scripts/enforce_quality_gate.py \
+            --summary-json test-results/${{ matrix.browser }}/summary.json \
+            --trend-json test-results/${{ matrix.browser }}/flaky-trend.json \
+            --enabled "${QUALITY_GATE_ENABLED:-false}" \
+            --min-pass-rate "${QUALITY_GATE_MIN_PASS_RATE:-95}" \
+            --max-failed-total "${QUALITY_GATE_MAX_FAILED_TOTAL:-0}" \
+            --max-flaky "${QUALITY_GATE_MAX_FLAKY:-5}" \
+            --output-md test-results/${{ matrix.browser }}/quality-gate.md
+
       - name: Upload nightly JUnit and summary artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -197,6 +258,7 @@ jobs:
             test-results/${{ matrix.browser }}/evidence-summary.md
             test-results/${{ matrix.browser }}/evidence-bundle.json
             test-results/${{ matrix.browser }}/evidence-bundle.md
+            test-results/${{ matrix.browser }}/quality-gate.md
           retention-days: 90
 
       - name: Upload nightly Allure raw results
@@ -225,6 +287,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install allurectl (optional)
+        if: ${{ env.ENABLE_TESTOPS_UPLOAD == 'true' }}
+        run: |
+          curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+          allurectl --version
 
       - name: Download nightly allure results
         uses: actions/download-artifact@v4
@@ -309,3 +379,38 @@ jobs:
             echo "- Live report: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/python-nightly/latest" >> $GITHUB_STEP_SUMMARY
           fi
           echo "- Artifact: python-nightly-allure-report-${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload combined nightly results to Allure TestOps (optional)
+        if: always()
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] }}
+          ALLURE_TOKEN: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] }}
+          ALLURE_PROJECT_ID: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] }}
+          ALLURE_LAUNCH_NAME: python-nightly-combined-${{ github.ref_name }}-${{ github.run_number }}
+        run: |
+          ENABLED_VALUE="${ALLURE_TESTOPS_ENABLED:-true}"
+
+          if [ "${ENABLE_TESTOPS_UPLOAD}" != "true" ] || [ "${ENABLED_VALUE}" = "false" ]; then
+            echo "Allure TestOps upload skipped (missing secrets)."
+            exit 0
+          fi
+
+          if [ ! -d "combined-allure-results" ]; then
+            echo "Combined Allure results folder not found, skipping upload."
+            exit 0
+          fi
+
+          printf "%s\n" \
+            "workflow=${{ github.workflow }}" \
+            "event=${{ github.event_name }}" \
+            "branch=${{ github.ref_name }}" \
+            "sha=${{ github.sha }}" \
+            "run_id=${{ github.run_id }}" \
+            "run_number=${{ github.run_number }}" \
+            "browser=combined" \
+            "schedule=nightly" \
+            "repository=${{ github.repository }}" \
+            > combined-allure-results/environment.properties
+
+          allurectl upload combined-allure-results

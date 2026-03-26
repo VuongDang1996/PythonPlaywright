@@ -1,0 +1,23 @@
+{
+  "description": "Optional local reference for self-hosted Allure TestOps values. Keep real values in GitHub Secrets for CI.",
+  "requiredGitHubSecrets": [
+    "ALLURE_TESTOPS_ENDPOINT",
+    "ALLURE_TESTOPS_TOKEN",
+    "ALLURE_TESTOPS_PROJECT_ID"
+  ],
+  "optionalGitHubSecrets": [
+    "ALLURE_TESTOPS_ENABLED",
+    "QUALITY_GATE_ENABLED",
+    "QUALITY_GATE_MIN_PASS_RATE",
+    "QUALITY_GATE_MAX_FAILED_TOTAL",
+    "QUALITY_GATE_MAX_FLAKY"
+  ],
+  "launchNamingConvention": {
+    "python-pytest": "python-pytest-{browser}-{ref}-{runNumber}",
+    "python-nightly": "python-nightly-{browser}-{ref}-{runNumber}",
+    "python-nightly-combined": "python-nightly-combined-{ref}-{runNumber}",
+    "python-manual": "python-manual-{browser}-{ref}-{runNumber}",
+    "individual-tests": "individual-tests-{browser}-{ref}-{runNumber}",
+    "individual-tests-combined": "individual-tests-combined-{ref}-{runNumber}"
+  }
+}

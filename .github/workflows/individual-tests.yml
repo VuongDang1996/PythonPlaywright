@@ -49,6 +49,8 @@ on:
 env:
   NODE_VERSION: '18'
   BASE_URL: 'http://automationexercise.com'
+  ENABLE_TESTOPS_UPLOAD: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] != '' && secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] != '' }}
+  ALLURE_TESTOPS_ENABLED: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENABLED')] }}
 
 jobs:
   test-individual:
@@ -72,6 +74,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install allurectl (optional)
+        if: ${{ env.ENABLE_TESTOPS_UPLOAD == 'true' }}
+        run: |
+          curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+          allurectl --version
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps ${{ matrix.browser }}
@@ -121,6 +131,42 @@ jobs:
             echo "**Allure Results**: Not generated ❌" >> test_summary.md
           fi
 
+      - name: Upload individual raw results to Allure TestOps (optional)
+        if: always()
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] }}
+          ALLURE_TOKEN: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] }}
+          ALLURE_PROJECT_ID: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] }}
+          ALLURE_LAUNCH_NAME: individual-tests-${{ matrix.browser }}-${{ github.ref_name }}-${{ github.run_number }}
+        run: |
+          ENABLED_VALUE="${ALLURE_TESTOPS_ENABLED:-true}"
+
+          if [ "${ENABLE_TESTOPS_UPLOAD}" != "true" ] || [ "${ENABLED_VALUE}" = "false" ]; then
+            echo "Allure TestOps upload skipped (missing secrets)."
+            exit 0
+          fi
+
+          if [ ! -d "allure-results" ]; then
+            echo "Allure results folder not found, skipping upload."
+            exit 0
+          fi
+
+          printf "%s\n" \
+            "workflow=${{ github.workflow }}" \
+            "event=${{ github.event_name }}" \
+            "branch=${{ github.ref_name }}" \
+            "sha=${{ github.sha }}" \
+            "run_id=${{ github.run_id }}" \
+            "run_number=${{ github.run_number }}" \
+            "browser=${{ matrix.browser }}" \
+            "test_pattern=${{ github.event.inputs.test_pattern || 'all' }}" \
+            "workers=${{ github.event.inputs.parallel_workers || '4' }}" \
+            "repository=${{ github.repository }}" \
+            > allure-results/environment.properties
+
+          allurectl upload allure-results
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -147,6 +193,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install allurectl (optional)
+        if: ${{ env.ENABLE_TESTOPS_UPLOAD == 'true' }}
+        run: |
+          curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+          allurectl --version
 
       - name: Download all test artifacts
         uses: actions/download-artifact@v4
@@ -193,6 +247,42 @@ jobs:
           name: allure-report-combined-${{ github.run_number }}
           path: allure-report/
           retention-days: 30
+
+      - name: Upload combined individual results to Allure TestOps (optional)
+        if: always()
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'ENDPOINT')] }}
+          ALLURE_TOKEN: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'TOKEN')] }}
+          ALLURE_PROJECT_ID: ${{ secrets[format('ALLURE_TESTOPS_{0}', 'PROJECT_ID')] }}
+          ALLURE_LAUNCH_NAME: individual-tests-combined-${{ github.ref_name }}-${{ github.run_number }}
+        run: |
+          ENABLED_VALUE="${ALLURE_TESTOPS_ENABLED:-true}"
+
+          if [ "${ENABLE_TESTOPS_UPLOAD}" != "true" ] || [ "${ENABLED_VALUE}" = "false" ]; then
+            echo "Allure TestOps upload skipped (missing secrets)."
+            exit 0
+          fi
+
+          if [ ! -d "allure-results" ]; then
+            echo "Combined Allure results folder not found, skipping upload."
+            exit 0
+          fi
+
+          printf "%s\n" \
+            "workflow=${{ github.workflow }}" \
+            "event=${{ github.event_name }}" \
+            "branch=${{ github.ref_name }}" \
+            "sha=${{ github.sha }}" \
+            "run_id=${{ github.run_id }}" \
+            "run_number=${{ github.run_number }}" \
+            "browser=combined" \
+            "test_pattern=${{ github.event.inputs.test_pattern || 'all' }}" \
+            "workers=${{ github.event.inputs.parallel_workers || '4' }}" \
+            "repository=${{ github.repository }}" \
+            > allure-results/environment.properties
+
+          allurectl upload allure-results
 
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'

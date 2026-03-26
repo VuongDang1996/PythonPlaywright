@@ -24,6 +24,47 @@ Primary artifact names:
 - `python-pytest-allure-report-*`
 - `python-nightly-allure-report-*`
 
+## Optional Self-Hosted Allure TestOps Upload
+
+The workflows can publish raw Allure results to your self-hosted Allure TestOps instance.
+
+Set these repository secrets in GitHub:
+
+- `ALLURE_TESTOPS_ENDPOINT`
+- `ALLURE_TESTOPS_TOKEN`
+- `ALLURE_TESTOPS_PROJECT_ID`
+
+Optional rollout toggle secret:
+
+- `ALLURE_TESTOPS_ENABLED` (set to `false` to disable uploads immediately)
+
+Optional quality gate secrets:
+
+- `QUALITY_GATE_ENABLED` (`false` by default)
+- `QUALITY_GATE_MIN_PASS_RATE` (`95` by default)
+- `QUALITY_GATE_MAX_FAILED_TOTAL` (`0` by default)
+- `QUALITY_GATE_MAX_FLAKY` (`5` by default)
+
+When enabled, primary and nightly Python workflows enforce thresholds using `scripts/enforce_quality_gate.py` and fail the job if thresholds are violated.
+
+Quality gate visibility:
+
+- Primary PR workflow appends gate output to the PR summary comment.
+- Metrics artifacts include `quality-gate.md` for both primary and nightly runs.
+
+How it works:
+
+1. If all three secrets are present, workflow jobs install `allurectl` and upload raw results.
+2. If one or more secrets are missing, upload is skipped and CI continues normally.
+3. Upload steps are intentionally non-blocking to keep existing pipelines stable during rollout.
+
+Supported workflows:
+
+- `.github/workflows/python-pytest.yml`
+- `.github/workflows/python-pytest-nightly.yml`
+- `.github/workflows/manual.yml`
+- `.github/workflows/individual-tests.yml`
+
 ## 📋 Workflow Overview
 
 The **Individual Tests with Allure Report** workflow is designed to:
